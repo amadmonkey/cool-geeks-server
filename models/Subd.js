@@ -1,8 +1,9 @@
 import mongoose from "../db/connection.js";
+import { SchemaTypes } from "mongoose";
 
 const SubdSchema = new mongoose.Schema(
 	{
-		_id: { type: String, required: true },
+		_id: { type: SchemaTypes.ObjectId, required: true },
 		name: { type: String, required: true },
 		code: { type: String, required: true },
 		gcash: {

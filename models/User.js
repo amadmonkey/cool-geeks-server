@@ -1,10 +1,11 @@
 import mongoose from "../db/connection.js";
+const { Schema, SchemaTypes } = mongoose;
 
-const UserSchema = new mongoose.Schema(
+const UserSchema = new Schema(
 	{
-		_id: { type: String, required: true },
-		subdId: { type: String },
-		planId: { type: String },
+		_id: { type: SchemaTypes.ObjectId, required: true },
+		subdRef: { type: SchemaTypes.ObjectId, ref: "Subd", required: true },
+		planRef: { type: SchemaTypes.ObjectId, ref: "Plan", required: true },
 		accountNumber: { type: String, unique: true, required: true },
 		password: { type: String, required: false },
 		firstName: { type: String, required: true },
@@ -13,7 +14,9 @@ const UserSchema = new mongoose.Schema(
 		address: { type: String, required: true },
 		contactNo: { type: String, required: true },
 		email: { type: String, required: true },
+		cutoff: { type: String, required: true },
 		admin: { type: Boolean, default: false, required: true },
+		active: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }
 );

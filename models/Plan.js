@@ -1,9 +1,10 @@
 import mongoose from "../db/connection.js";
+import { SchemaTypes } from "mongoose";
 
 const PlanSchema = new mongoose.Schema(
 	{
-		_id: { type: String, required: true },
-		subdId: { type: String, required: true },
+		_id: { type: SchemaTypes.ObjectId, required: true },
+		subdRef: { type: SchemaTypes.ObjectId, ref: "Subd", required: true },
 		name: { type: String, required: true },
 		description: { type: String, required: false },
 		price: { type: String, required: true },

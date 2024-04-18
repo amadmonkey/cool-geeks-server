@@ -14,11 +14,11 @@ const router = Router();
 router.post("/signup", async (req, res) => {
 	try {
 		req.body.password = await bcrypt.hash(req.body.password, 10);
-		const user = await User.create({
+		await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...req.body,
 		});
-		res.json(user);
+		res.status(200).json(RESPONSE.success(200, { general: "Registration successful" }));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(403, { e }));
 	}
@@ -31,13 +31,15 @@ router.post("/login", async (req, res) => {
 				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
 			},
 			"-_id"
-		);
+		).populate("planRef subdRef");
+		console.log(user);
 		if (user) {
 			const result = await bcrypt.compare(req.body.password, user.password);
 			if (result) {
 				const userObj = {
 					accountNumber: user.accountNumber,
-					generatedVia: "login",
+					admin: user.admin,
+					generatedVia: "LOGIN",
 				};
 				const accessToken = TOKEN.create(userObj);
 				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
@@ -50,8 +52,8 @@ router.post("/login", async (req, res) => {
 					},
 				});
 
-				const subd = await Subd.findOne({ _id: user.subdId });
-				const plan = await Plan.findOne({ _id: user.planId });
+				const subd = await Subd.findOne({ _id: user.subdRef });
+				const plan = await Plan.findOne({ _id: user.planRef });
 				user.password = undefined;
 
 				res.cookie("accessToken", accessToken, TOKEN.options(CONSTANTS.accessTokenAge));
@@ -64,7 +66,19 @@ router.post("/login", async (req, res) => {
 			res.status(400).json(RESPONSE.fail(400, { general: "User doesn't exist" }));
 		}
 	} catch (e) {
+		console.error(e);
 		res.status(400).json(RESPONSE.fail(400, { e }));
+	}
+});
+
+router.delete("/logout", async (req, res) => {
+	try {
+		res.clearCookie("accessToken", { path: "/" });
+		res.clearCookie("refreshToken", { path: "/" });
+		LOG.success("LOGOUT", "Logout successful");
+		res.status(200).json(RESPONSE.fail(200, { general: "Logout successful" }));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, e));
 	}
 });
 

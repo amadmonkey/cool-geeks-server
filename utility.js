@@ -2,8 +2,14 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 export const CONSTANTS = {
-	accessTokenAge: 5000,
-	refreshTokenAge: 60000,
+	accessTokenAge: 60000 * 60,
+	refreshTokenAge: 60000 * 60 * 6,
+	PAYMENT_STATUS: {
+		pending: "PENDING",
+		accepted: "ACCEPTED",
+		denied: "DENIED",
+		failed: "FAILED",
+	},
 };
 
 export const RESPONSE = {
@@ -33,9 +39,9 @@ export const LOG = {
 const tokenOptions = (maxAge) => {
 	return {
 		...{
-			httpOnly: true, // Cookie will not be exposed to client side code
-			sameSite: "lax", // If client and server origins are different
-			secure: false, // use with HTTPS only
+			httpOnly: true,
+			sameSite: "lax",
+			secure: false,
 			overwrite: true,
 		},
 		...{ maxAge: maxAge },
@@ -73,15 +79,17 @@ export const TOKEN = {
 
 				const userObj = {
 					accountNumber: user.accountNumber,
-					generatedVia: "token refresh",
+					admin: user.admin,
+					generatedVia: "TOKEN_REFRESH",
 				};
-
 				const accessToken = TOKEN.create(userObj);
 				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
 
+				// delete token existing tokens
 				const tokenRemoveResponse = await tokenRemove(accountNumber, Token);
 				console.log("tokenRemoveResponse", tokenRemoveResponse);
 
+				// save new token to db
 				const tokenCreateResponse = Token.create({
 					...{ _id: new mongoose.Types.ObjectId() },
 					...{
@@ -90,11 +98,10 @@ export const TOKEN = {
 					},
 				});
 				console.log("tokenCreateResponse", tokenCreateResponse);
+
 				res.cookie("accessToken", accessToken, tokenOptions(CONSTANTS.accessTokenAge));
 				res.cookie("refreshToken", refreshToken, tokenOptions(CONSTANTS.refreshTokenAge));
 				console.log(RESPONSE.success(200, { message: "token refresh successful" }));
-				console.log("NEW ACCESS TOKEN", accessToken);
-				console.log("NEW REFRESH TOKEN", refreshToken);
 				res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
 			});
 		} catch (e) {
