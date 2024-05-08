@@ -3,6 +3,7 @@ import Router from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import isLoggedIn from "./middleware.js";
 import User from "../models/User.js";
 import Subd from "../models/Subd.js";
 import Plan from "../models/Plan.js";
@@ -11,7 +12,45 @@ import { CONSTANTS, LOG, RESPONSE, TOKEN } from "../utility.js";
 
 const router = Router();
 
+router.get("/", isLoggedIn, async (req, res) => {
+	try {
+		const { query } = req;
+		const isAdmin = req.user.admin;
+		if (isAdmin) {
+			const users = await User.find({}, null, {
+				skip: (query.page - 1) * query.limit, // Starting Row
+				limit: query.limit, // Ending Row
+				sort: {
+					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
+				},
+			}).populate("subdRef planRef");
+			const data = {
+				list: users.length ? users : [],
+			};
+			res.status(200).json(RESPONSE.success(200, data));
+		} else {
+			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
+		}
+	} catch (e) {
+		LOG.error(e);
+		res.status(400).json(RESPONSE.fail(400, { e }));
+	}
+});
+
 router.post("/signup", async (req, res) => {
+	try {
+		req.body.password = await bcrypt.hash(req.body.password, 10);
+		await User.create({
+			...{ _id: new mongoose.Types.ObjectId() },
+			...req.body,
+		});
+		res.status(200).json(RESPONSE.success(200, { general: "Registration successful" }));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(403, { e }));
+	}
+});
+
+router.post("/create", async (req, res) => {
 	try {
 		req.body.password = await bcrypt.hash(req.body.password, 10);
 		await User.create({
@@ -32,7 +71,6 @@ router.post("/login", async (req, res) => {
 			},
 			"-_id"
 		).populate("planRef subdRef");
-		console.log(user);
 		if (user) {
 			const result = await bcrypt.compare(req.body.password, user.password);
 			if (result) {
@@ -76,7 +114,7 @@ router.delete("/logout", async (req, res) => {
 		res.clearCookie("accessToken", { path: "/" });
 		res.clearCookie("refreshToken", { path: "/" });
 		LOG.success("LOGOUT", "Logout successful");
-		res.status(200).json(RESPONSE.fail(200, { general: "Logout successful" }));
+		res.status(200).json(RESPONSE.success(200, { general: "Logout successful" }));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, e));
 	}

@@ -28,17 +28,10 @@ const hasFailed = async (user, date, currentPayment) => {
 	const endDate = new Date();
 	switch (cutoff) {
 		case "MID":
-			// if (date.getDate() > 15) {
 			startDate.setMonth(date.getMonth() - (date.getDate() > 15 ? 1 : 2));
 			startDate.setDate(15);
 			endDate.setMonth(date.getMonth() - (date.getDate() > 15 ? 0 : 1));
 			endDate.setDate(15);
-			// } else {
-			// 	startDate.setMonth(date.getMonth() - 2);
-			// 	startDate.setDate(15);
-			// 	endDate.setMonth(date.getMonth() - 1);
-			// 	endDate.setDate(15);
-			// }
 			break;
 		case "END":
 			startDate.setMonth(date.getMonth());
@@ -49,6 +42,9 @@ const hasFailed = async (user, date, currentPayment) => {
 		default:
 			return RESPONSE.fail(400, { message: "No cutoff info found." });
 	}
+
+	startDate.setUTCHours(23, 59, 59, 999);
+	endDate.setUTCHours(23, 59, 59, 999);
 
 	const range = {
 		$gte: startDate,
@@ -141,7 +137,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			skip: (query.page - 1) * query.limit, // Starting Row
 			limit: query.limit, // Ending Row
 			sort: {
-				[query.sortBy]: query.sortOrder === "ASC" ? 1 : -1, //Sort by createdAt DESC
+				[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
 			},
 		}).populate(
 			isAdmin && [
@@ -200,7 +196,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 router.post("/update", isLoggedIn, async (req, res) => {
 	try {
 		const updatedItem = await Payment.findOneAndUpdate(
-			{ _id: req.body.id },
+			{ _id: req.body.toUpdate },
 			{ status: req.body.newStatus },
 			{ new: true }
 		).populate([

@@ -2,6 +2,8 @@ import "dotenv/config.js";
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
+import path from "path";
+import url from "url";
 
 import UserRouter from "./controllers/User.js";
 import SubdRouter from "./controllers/Subd.js";
@@ -16,9 +18,14 @@ const { PORT } = process.env;
 const app = express();
 
 const corsOptions = {
-	origin: "http://localhost.com:3000/",
+	origin: "http://localhost:3000/",
 	credentials: true,
 };
+
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dir = path.join(__dirname, "/uploads");
+app.use(express.static(dir));
 
 app.use(cors(corsOptions));
 app.use(morgan("tiny"));

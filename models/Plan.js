@@ -7,7 +7,8 @@ const PlanSchema = new mongoose.Schema(
 		subdRef: { type: SchemaTypes.ObjectId, ref: "Subd", required: true },
 		name: { type: String, required: true },
 		description: { type: String, required: false },
-		price: { type: String, required: true },
+		price: { type: Number, required: true },
+		isActive: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }
 );

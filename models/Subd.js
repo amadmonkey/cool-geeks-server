@@ -6,6 +6,8 @@ const SubdSchema = new mongoose.Schema(
 		_id: { type: SchemaTypes.ObjectId, required: true },
 		name: { type: String, required: true },
 		code: { type: String, required: true },
+		code: { type: String, required: true },
+		plans: {},
 		gcash: {
 			qr: {
 				filename: { type: String, required: true },
@@ -13,6 +15,7 @@ const SubdSchema = new mongoose.Schema(
 			},
 			number: { type: String, required: true },
 		},
+		isActive: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }
 );
