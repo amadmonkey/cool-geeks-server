@@ -17,7 +17,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 		const { query } = req;
 		const isAdmin = req.user.admin;
 		if (isAdmin) {
-			const users = await User.find({}, null, {
+			const users = await User.find({ admin: false }, null, {
 				skip: (query.page - 1) * query.limit, // Starting Row
 				limit: query.limit, // Ending Row
 				sort: {
@@ -51,15 +51,16 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/create", async (req, res) => {
+	console.log("======", req.body);
 	try {
-		req.body.password = await bcrypt.hash(req.body.password, 10);
 		await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
-			...req.body,
+			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
-		res.status(200).json(RESPONSE.success(200, { general: "Registration successful" }));
+		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 	} catch (e) {
-		res.status(400).json(RESPONSE.fail(403, { e }));
+		console.log(e);
+		res.status(400).json(RESPONSE.fail(403, { message: e.message }));
 	}
 });
 
