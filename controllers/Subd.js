@@ -26,7 +26,10 @@ router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
 		const updatedSubds = [];
-		const subdData = await Subd.find().sort(JSON.parse(query.sort)).lean();
+		const subdData = await Subd.find({ active: true })
+			.collation({ locale: "en" })
+			.sort(JSON.parse(query.sort))
+			.lean();
 
 		for (let x = 0; x < subdData.length; x++) {
 			const plans = await Plan.find({ subdRef: subdData[x]._id }).sort({ price: "asc" }).lean();
@@ -96,6 +99,23 @@ router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 		}));
 		const plansRes = await Plan.insertMany(plans);
 		return res.json(RESPONSE.success(200, { ...subdRes, ...{ plans: plansRes } }));
+	} catch (e) {
+		console.log(RESPONSE.fail(400, { e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.delete("/delete", isLoggedIn, async (req, res) => {
+	try {
+		console.log("DELETE: req.body", req.body);
+		const subdRes = await Subd.findOneAndUpdate(
+			{ _id: req.body._id },
+			{ active: false },
+			{
+				new: true,
+			}
+		).lean();
+		return res.json(RESPONSE.success(200, subdRes));
 	} catch (e) {
 		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
