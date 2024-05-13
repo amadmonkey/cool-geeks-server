@@ -2,10 +2,10 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 export const CONSTANTS = {
-	// accessTokenAge: 60000 * 60,
-	// refreshTokenAge: 60000 * 60 * 6,
-	accessTokenAge: 10000,
+	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,
+	// accessTokenAge: 10000,
+	// refreshTokenAge: 60000 * 60 * 6,
 	PAYMENT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",

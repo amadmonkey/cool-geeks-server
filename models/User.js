@@ -13,7 +13,7 @@ const UserSchema = new Schema(
 		lastName: { type: String, required: true },
 		address: { type: String, required: true },
 		contactNo: { type: String, required: true },
-		email: { type: String, required: true },
+		email: { type: String, unique: true, required: true },
 		cutoff: { type: String, required: true },
 		admin: { type: Boolean, default: false, required: true },
 		status: { type: String, default: "PENDING", required: true },

@@ -51,7 +51,6 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/create", async (req, res) => {
-	console.log("======", req.body);
 	try {
 		await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
@@ -107,6 +106,21 @@ router.post("/login", async (req, res) => {
 	} catch (e) {
 		console.error(e);
 		res.status(400).json(RESPONSE.fail(400, { e }));
+	}
+});
+
+router.put("/update", isLoggedIn, async (req, res) => {
+	try {
+		const updateRes = await User.findOneAndUpdate({ _id: req.body._id }, req.body, {
+			new: true,
+		}).populate("subdRef planRef");
+		console.log("res", res);
+		res.status(200).json(RESPONSE.success(200, updateRes));
+
+		// return res.json(RESPONSE.success(200, res));
+	} catch (e) {
+		console.log(RESPONSE.fail(400, { e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
