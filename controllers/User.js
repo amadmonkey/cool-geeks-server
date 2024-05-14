@@ -72,6 +72,13 @@ router.post("/login", async (req, res) => {
 			"-_id"
 		).populate("planRef subdRef");
 		if (user) {
+			if (!user.active)
+				return res.status(403).json(
+					RESPONSE.fail(403, {
+						general:
+							"Account has been deactivated. Please contact [number here] or [number here] for info or reactivation",
+					})
+				);
 			const result = await bcrypt.compare(req.body.password, user.password);
 			if (result) {
 				const userObj = {
