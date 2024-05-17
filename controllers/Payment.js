@@ -178,7 +178,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 				planRef: user.planRef,
 				referenceType: req.body.referenceType,
 				referenceNumber: req.body.referenceNumber,
-				receiptName: req.body.receiptName,
+				receiptName: req.file.filename,
 				paymentDate: paymentDate,
 				cutoff: user.cutoff,
 				status: "PENDING",
