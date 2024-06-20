@@ -6,7 +6,7 @@ export const CONSTANTS = {
 	refreshTokenAge: 60000 * 60 * 6,
 	// accessTokenAge: 10000,
 	// refreshTokenAge: 60000 * 60 * 6,
-	PAYMENT_STATUS: {
+	RECEIPT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",
 		denied: "DENIED",

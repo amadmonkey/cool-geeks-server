@@ -28,6 +28,8 @@ router.get("/", isLoggedIn, async (req, res) => {
 		const updatedSubds = [];
 		const subdData = await Subd.find({ active: true })
 			.collation({ locale: "en" })
+			.skip((query.page - 1) * query.limit)
+			.limit(query.limit)
 			.sort(JSON.parse(query.sort))
 			.lean();
 

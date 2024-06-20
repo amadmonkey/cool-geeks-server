@@ -8,7 +8,7 @@ import url from "url";
 import UserRouter from "./controllers/User.js";
 import SubdRouter from "./controllers/Subd.js";
 import PlanRouter from "./controllers/Plan.js";
-import PaymentRouter from "./controllers/Payment.js";
+import ReceiptRouter from "./controllers/Receipt.js";
 import TokenRouter from "./controllers/Token.js";
 
 import { LOG } from "./utility.js";
@@ -19,6 +19,7 @@ const app = express();
 
 const corsOptions = {
 	origin: "http://localhost:3000/",
+	// origin: "http://192.168.1.4:3000",
 	credentials: true,
 };
 
@@ -38,7 +39,7 @@ app.get("/", (_, res) => {
 app.use("/user", UserRouter);
 app.use("/subd", SubdRouter);
 app.use("/plan", PlanRouter);
-app.use("/payment", PaymentRouter);
+app.use("/receipt", ReceiptRouter);
 app.use("/token", TokenRouter);
 
 app.listen(PORT, () => LOG.success(`SERVER STATUS: Listening on port ${PORT}`));

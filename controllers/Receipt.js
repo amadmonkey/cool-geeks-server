@@ -3,9 +3,9 @@ import multer from "multer";
 import Router from "express";
 import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
-import Payment from "../models/Payment.js";
+import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
-import { LOG, RESPONSE } from "../utility.js";
+import { CONSTANTS, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const hasFailed = async (user, date, currentPayment) => {
+const createFailed = async (user, date, currentReceipt) => {
 	const { _id, cutoff } = user;
 	const startDate = new Date();
 	const endDate = new Date();
@@ -48,20 +48,21 @@ const hasFailed = async (user, date, currentPayment) => {
 
 	const range = {
 		$gte: startDate,
-		$lt: endDate,
+		$lte: endDate,
 	};
 
 	const hasFailed =
-		(await Payment.findOne({
+		(await Receipt.findOne({
 			userRef: user._id,
-			paymentDate: range,
+			receiptDate: range,
 			status: "FAILED",
 		})) || "";
 
 	console.log("date", date);
 	console.log("range", range);
+	console.log("currentReceipt", currentReceipt);
 	console.log("hasFailed", hasFailed);
-	if (!(date > startDate && date < endDate) && !currentPayment && !hasFailed) {
+	if (!(date > startDate && date < endDate) && !currentReceipt && !hasFailed) {
 		const formData = {
 			_id: new mongoose.Types.ObjectId(),
 			userRef: user._id,
@@ -69,16 +70,16 @@ const hasFailed = async (user, date, currentPayment) => {
 			referenceType: {},
 			referenceNumber: "",
 			receiptName: "",
-			paymentDate: endDate,
+			receiptDate: endDate,
 			cutoff: user.cutoff,
 			status: "FAILED",
 		};
-		const SavePayment = new Payment(formData);
-		await SavePayment.save();
+		const SaveReceipt = new Receipt(formData);
+		await SaveReceipt.save();
 	}
 };
 
-const getCurrentPayment = async (req, user) => {
+const getCurrentReceipt = async (req, user) => {
 	const { _id, cutoff } = user;
 	const date = new Date(); //"2024-04-11"
 
@@ -114,18 +115,18 @@ const getCurrentPayment = async (req, user) => {
 		$lt: endDate,
 	};
 
-	const currentPayment =
-		(await Payment.findOne({
+	const currentReceipt =
+		(await Receipt.findOne({
 			userRef: _id,
-			paymentDate: range,
+			receiptDate: range,
 			status: { $nin: ["DENIED", "FAILED"] },
 		})) || "";
 
-	console.log("currentPayment", currentPayment);
+	console.log("currentReceipt", currentReceipt);
 
-	await hasFailed(user, date, currentPayment, cutoff);
+	await createFailed(user, date, currentReceipt, cutoff);
 
-	return currentPayment;
+	return currentReceipt;
 };
 
 router.get("/", isLoggedIn, async (req, res) => {
@@ -133,13 +134,18 @@ router.get("/", isLoggedIn, async (req, res) => {
 		const { query } = req;
 		const isAdmin = req.user.admin;
 		const user = await User.findOne({ accountNumber: req.user.accountNumber });
-		const payments = await Payment.find(isAdmin ? {} : { userRef: user._id }, null, {
-			skip: (query.page - 1) * query.limit, // Starting Row
-			limit: query.limit, // Ending Row
-			sort: {
-				[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
-			},
-		}).populate(
+		console.log("user", user._id);
+		const receipts = await Receipt.find(
+			isAdmin ? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } } : { userRef: user._id },
+			null,
+			{
+				skip: (query.page - 1) * query.limit, // Starting Row
+				limit: query.limit, // Ending Row
+				sort: {
+					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
+				},
+			}
+		).populate(
 			isAdmin && [
 				{
 					path: "planRef",
@@ -152,8 +158,8 @@ router.get("/", isLoggedIn, async (req, res) => {
 		);
 		// check if already paid current cutoff
 		const data = {
-			list: payments.length ? payments : [],
-			currentPayment: !isAdmin ? await getCurrentPayment(req, user) : null,
+			list: receipts.length ? receipts : [],
+			currentRececipt: !isAdmin ? await getCurrentReceipt(req, user) : null,
 		};
 		res.status(200).json(RESPONSE.success(200, data));
 	} catch (e) {
@@ -169,9 +175,9 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			"_id planRef cutoff"
 		);
 		if (user) {
-			const currentPayment = await getCurrentPayment(req, user);
-			const paymentDate = new Date();
-			if (currentPayment) paymentDate.setMonth(paymentDate.getMonth() + 1);
+			const currentReceipt = await getCurrentReceipt(req, user);
+			const receiptDate = new Date();
+			if (currentReceipt) currentDate.setMonth(receiptDate.getMonth() + 1);
 			const formData = {
 				_id: new mongoose.Types.ObjectId(),
 				userRef: user._id,
@@ -179,12 +185,12 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 				referenceType: req.body.referenceType,
 				referenceNumber: req.body.referenceNumber,
 				receiptName: req.file.filename,
-				paymentDate: paymentDate,
+				receiptDate: receiptDate,
 				cutoff: user.cutoff,
 				status: "PENDING",
 			};
-			const SavePayment = new Payment(formData);
-			const uploadProcess = await SavePayment.save();
+			const SaveReceipt = new Receipt(formData);
+			const uploadProcess = await SaveReceipt.save();
 			return res.json(RESPONSE.success(200, uploadProcess));
 		}
 	} catch (e) {
@@ -195,7 +201,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 
 router.post("/update", isLoggedIn, async (req, res) => {
 	try {
-		const updatedItem = await Payment.findOneAndUpdate(
+		const updatedItem = await Receipt.findOneAndUpdate(
 			{ _id: req.body.toUpdate },
 			{ status: req.body.newStatus },
 			{ new: true }
