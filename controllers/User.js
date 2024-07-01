@@ -24,6 +24,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
 				},
 			}).populate("subdRef planRef");
+			console.log("====", users);
 			const data = {
 				list: users.length ? users : [],
 			};

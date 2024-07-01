@@ -94,12 +94,15 @@ router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 			new: true,
 		}).lean();
 
-		await Plan.deleteMany({ subdRef: subdRes._id });
-		const plans = JSON.parse(req.body.plans).map((plan) => ({
-			...plan,
-			...{ _id: new mongoose.Types.ObjectId(), subdRef: subdRes._id },
-		}));
-		const plansRes = await Plan.insertMany(plans);
+		// await Plan.deleteMany({ subdRef: subdRes._id });
+		// const plans = JSON.parse(req.body.plans).map((plan) => ({
+		// 	...plan,
+		// 	...{ _id: new mongoose.Types.ObjectId(), subdRef: subdRes._id },
+		// }));
+		// const plansRes = await Plan.insertMany(plans);
+		const plansRes = await Plan.find({ subdRef: subdRes._id }).catch((error) =>
+			res.status(400).json(RESPONSE.fail(400, { error }))
+		);
 		return res.json(RESPONSE.success(200, { ...subdRes, ...{ plans: plansRes } }));
 	} catch (e) {
 		console.log(RESPONSE.fail(400, { e }));

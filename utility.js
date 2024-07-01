@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 export const CONSTANTS = {
 	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,
-	// accessTokenAge: 10000,
-	// refreshTokenAge: 60000 * 60 * 6,
+	accessTokenAge: 10000,
+	refreshTokenAge: 60000 * 60 * 6,
 	RECEIPT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",
@@ -107,8 +107,9 @@ export const TOKEN = {
 				res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
 			});
 		} catch (e) {
-			console.error(e);
-			res.status(400).json(RESPONSE.fail(403, { e }));
+			res
+				.status(400)
+				.json(RESPONSE.fail(400, { message: "No refresh token found. Redirect to logout" }));
 		}
 	},
 	create: (tokenObj) => {

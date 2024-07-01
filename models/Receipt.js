@@ -9,7 +9,7 @@ const ReceiptSchema = new mongoose.Schema(
 		referenceType: { type: Object, required: true },
 		referenceNumber: { type: String },
 		receiptName: { type: String },
-		receiptDate: { type: Date, required: true, default: new Date() },
+		receiptDate: { type: Date, required: true, default: new Date() }, // date the receipt is trying to pay
 		cutoff: { type: String, required: true },
 		status: { type: String, required: true, default: "PENDING" },
 	},

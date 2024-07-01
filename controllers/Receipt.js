@@ -22,8 +22,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const createFailed = async (user, date, currentReceipt) => {
+const createFailed = async (user) => {
 	const { _id, cutoff } = user;
+	const date = new Date();
 	const startDate = new Date();
 	const endDate = new Date();
 	switch (cutoff) {
@@ -53,16 +54,12 @@ const createFailed = async (user, date, currentReceipt) => {
 
 	const hasFailed =
 		(await Receipt.findOne({
-			userRef: user._id,
+			userRef: _id,
 			receiptDate: range,
-			status: "FAILED",
+			status: CONSTANTS.RECEIPT_STATUS.failed,
 		})) || "";
 
-	console.log("date", date);
-	console.log("range", range);
-	console.log("currentReceipt", currentReceipt);
-	console.log("hasFailed", hasFailed);
-	if (!(date > startDate && date < endDate) && !currentReceipt && !hasFailed) {
+	if (!(date > startDate && date < endDate) && !hasFailed) {
 		const formData = {
 			_id: new mongoose.Types.ObjectId(),
 			userRef: user._id,
@@ -79,9 +76,21 @@ const createFailed = async (user, date, currentReceipt) => {
 	}
 };
 
+// used for checking adding new receipts, if exists +1 month, if status = denied then ignore,
 const getCurrentReceipt = async (req, user) => {
 	const { _id, cutoff } = user;
-	const date = new Date(); //"2024-04-11"
+
+	const latestReceipt = await Receipt.findOne(
+		{ userRef: _id, status: { $ne: CONSTANTS.RECEIPT_STATUS.denied } },
+		null,
+		{
+			sort: {
+				createdAt: "desc",
+			},
+		}
+	);
+
+	const date = latestReceipt ? new Date(latestReceipt.receiptDate) : new Date(); //"2024-04-11"
 
 	// get date range based on user's chosen cutoff
 	const startDate = new Date();
@@ -112,19 +121,15 @@ const getCurrentReceipt = async (req, user) => {
 
 	const range = {
 		$gte: startDate,
-		$lt: endDate,
+		$lte: endDate,
 	};
 
 	const currentReceipt =
 		(await Receipt.findOne({
 			userRef: _id,
 			receiptDate: range,
-			status: { $nin: ["DENIED", "FAILED"] },
+			status: { $nin: ["DENIED"] },
 		})) || "";
-
-	console.log("currentReceipt", currentReceipt);
-
-	await createFailed(user, date, currentReceipt, cutoff);
 
 	return currentReceipt;
 };
@@ -134,7 +139,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 		const { query } = req;
 		const isAdmin = req.user.admin;
 		const user = await User.findOne({ accountNumber: req.user.accountNumber });
-		console.log("user", user._id);
 		const receipts = await Receipt.find(
 			isAdmin ? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } } : { userRef: user._id },
 			null,
@@ -159,8 +163,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 		// check if already paid current cutoff
 		const data = {
 			list: receipts.length ? receipts : [],
-			currentRececipt: !isAdmin ? await getCurrentReceipt(req, user) : null,
 		};
+		if (!isAdmin) {
+			const currentReceipt = await getCurrentReceipt(req, user);
+			!currentReceipt && (await createFailed(user));
+			data.currentReceipt = currentReceipt;
+		}
 		res.status(200).json(RESPONSE.success(200, data));
 	} catch (e) {
 		LOG.error(e);
@@ -176,8 +184,9 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 		);
 		if (user) {
 			const currentReceipt = await getCurrentReceipt(req, user);
-			const receiptDate = new Date();
-			if (currentReceipt) currentDate.setMonth(receiptDate.getMonth() + 1);
+			const receiptDate = new Date(currentReceipt.receiptDate); //"2024-04-11"
+			console.log("receiptDate", receiptDate);
+			if (currentReceipt) receiptDate.setMonth(receiptDate.getMonth() + 1);
 			const formData = {
 				_id: new mongoose.Types.ObjectId(),
 				userRef: user._id,
@@ -214,7 +223,6 @@ router.post("/update", isLoggedIn, async (req, res) => {
 			},
 			"userRef",
 		]);
-		console.log(updatedItem);
 		return res.json(RESPONSE.success(200, updatedItem));
 	} catch (e) {
 		LOG.error(e);
