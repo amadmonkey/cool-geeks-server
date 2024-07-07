@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 export const CONSTANTS = {
-	accessTokenAge: 60000 * 60,
-	refreshTokenAge: 60000 * 60 * 6,
+	// accessTokenAge: 60000 * 60,
+	// refreshTokenAge: 60000 * 60 * 6,
 	accessTokenAge: 10000,
 	refreshTokenAge: 60000 * 60 * 6,
 	RECEIPT_STATUS: {
@@ -58,7 +58,7 @@ export const TOKEN = {
 		try {
 			console.log(req.body);
 			const refreshToken = req.body.token;
-			console.log("refreshToken", refreshToken);
+			console.log("refreshToken 1", refreshToken);
 			const { accountNumber } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 			if (!refreshToken) {
 				tokenRemove(accountNumber, Token);
@@ -67,17 +67,19 @@ export const TOKEN = {
 					.json(RESPONSE.fail(401, { error: "No refresh token found. Redirect to logout" }));
 			}
 
-			const existingToken = await Token.findOne({ accountNumber: accountNumber });
-			if (!existingToken) {
-				tokenRemove(accountNumber, Token);
-				return res
-					.status(403)
-					.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
-			}
+			// console.log("refreshToken 2", refreshToken);
+			// const existingToken = await Token.findOne({ accountNumber: accountNumber });
+			// if (!existingToken) {
+			// 	tokenRemove(accountNumber, Token);
+			// 	return res
+			// 		.status(403)
+			// 		.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
+			// }
 
+			console.log("refreshToken 3", refreshToken);
 			jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async (err, user) => {
-				if (err)
-					return res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
+				if (err) res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
+				console.log("err", err);
 
 				const userObj = {
 					accountNumber: user.accountNumber,
@@ -104,10 +106,10 @@ export const TOKEN = {
 				res.cookie("accessToken", accessToken, tokenOptions(CONSTANTS.accessTokenAge));
 				res.cookie("refreshToken", refreshToken, tokenOptions(CONSTANTS.refreshTokenAge));
 				console.log(RESPONSE.success(200, { message: "token refresh successful" }));
-				res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
+				return res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
 			});
 		} catch (e) {
-			res
+			return res
 				.status(400)
 				.json(RESPONSE.fail(400, { message: "No refresh token found. Redirect to logout" }));
 		}

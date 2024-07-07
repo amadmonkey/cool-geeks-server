@@ -5,8 +5,8 @@ import { TOKEN } from "../utility.js";
 
 const router = Router();
 
-router.post("/refresh", async (req, res) => {
-	return await TOKEN.refresh(req, res, Token);
+router.post("/refresh", (req, res) => {
+	return TOKEN.refresh(req, res, Token);
 });
 
 export default router;

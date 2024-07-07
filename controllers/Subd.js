@@ -25,20 +25,23 @@ const upload = multer({ storage: storage });
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
-		const updatedSubds = [];
-		const subdData = await Subd.find({ active: true })
+		// const updatedSubds = [];
+		console.log("---", query.filter);
+		// console.log("---", { ...JSON.parse(query.filter), ...{ active: true } });
+		const subdData = await Subd.find(query.filter ? JSON.parse(query.filter) : {})
 			.collation({ locale: "en" })
 			.skip((query.page - 1) * query.limit)
 			.limit(query.limit)
 			.sort(JSON.parse(query.sort))
 			.lean();
 
-		for (let x = 0; x < subdData.length; x++) {
-			const plans = await Plan.find({ subdRef: subdData[x]._id }).sort({ price: "asc" }).lean();
-			updatedSubds.push({ ...subdData[x], ...{ plans: plans } });
-		}
+		// for (let x = 0; x < subdData.length; x++) {
+		// 	const plans = await Plan.find({ subdRef: subdData[x]._id }).sort({ price: "asc" }).lean();
+		// 	updatedSubds.push({ ...subdData[x], ...{ plans: plans } });
+		// }
 
-		res.status(200).json(RESPONSE.success(200, updatedSubds));
+		// res.status(200).json(RESPONSE.success(200, updatedSubds));
+		res.status(200).json(RESPONSE.success(200, subdData));
 	} catch (error) {
 		LOG.error(error);
 		res.status(400).json(RESPONSE.fail(400, { error }));
@@ -65,11 +68,11 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 			...plan,
 			...{ _id: new mongoose.Types.ObjectId(), subdRef: subdRes._id },
 		}));
-		const plansRes = await Plan.insertMany(plans);
-		res.json(RESPONSE.success(200, subdRes));
+		await Plan.insertMany(plans);
+		res.status(200).json(RESPONSE.success(200, subdRes));
 	} catch (e) {
-		console.log(RESPONSE.fail({ e }));
-		res.status(400).json(RESPONSE.fail({ e }));
+		console.log(RESPONSE.fail({ message: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 

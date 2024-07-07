@@ -24,7 +24,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
 				},
 			}).populate("subdRef planRef");
-			console.log("====", users);
 			const data = {
 				list: users.length ? users : [],
 			};
@@ -122,10 +121,8 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		const updateRes = await User.findOneAndUpdate({ _id: req.body._id }, req.body, {
 			new: true,
 		}).populate("subdRef planRef");
-		console.log("res", res);
+		console.log("updateRes", updateRes);
 		res.status(200).json(RESPONSE.success(200, updateRes));
-
-		// return res.json(RESPONSE.success(200, res));
 	} catch (e) {
 		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
