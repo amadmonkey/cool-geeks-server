@@ -5,6 +5,7 @@ import cors from "cors";
 import path from "path";
 import url from "url";
 
+import AuthRouter from "./controllers/Auth.js";
 import UserRouter from "./controllers/User.js";
 import SubdRouter from "./controllers/Subd.js";
 import PlanRouter from "./controllers/Plan.js";
@@ -36,10 +37,11 @@ app.get("/", (_, res) => {
 	res.send("this is the test route to make sure server is working");
 });
 
+app.use("/auth", AuthRouter);
 app.use("/user", UserRouter);
 app.use("/subd", SubdRouter);
 app.use("/plan", PlanRouter);
-app.use("/receipt", ReceiptRouter);
 app.use("/token", TokenRouter);
+app.use("/receipt", ReceiptRouter);
 
 app.listen(PORT, () => LOG.success(`SERVER STATUS: Listening on port ${PORT}`));

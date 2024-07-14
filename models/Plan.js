@@ -9,6 +9,7 @@ const PlanSchema = new mongoose.Schema(
 		description: { type: String, required: false },
 		price: { type: Number, required: true },
 		active: { type: Boolean, default: true, required: true },
+		deleted: { type: Boolean, default: false, required: true },
 	},
 	{ timestamps: true }
 );

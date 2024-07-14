@@ -12,6 +12,15 @@ export const CONSTANTS = {
 		denied: "DENIED",
 		failed: "FAILED",
 	},
+	ACCOUNT_STATUS: {
+		pending: "PENDING",
+		active: "ACTIVE",
+		deactivated: "DEACTIVATED",
+	},
+	CUTOFF: {
+		mid: "MID",
+		end: "END",
+	},
 };
 
 export const RESPONSE = {
@@ -79,7 +88,6 @@ export const TOKEN = {
 			console.log("refreshToken 3", refreshToken);
 			jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async (err, user) => {
 				if (err) res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
-				console.log("err", err);
 
 				const userObj = {
 					accountNumber: user.accountNumber,
@@ -121,4 +129,13 @@ export const TOKEN = {
 	},
 	remove: (accountNumber, Token) => tokenRemove(accountNumber, Token),
 	options: (maxAge) => tokenOptions(maxAge),
+};
+
+export const addMonths = (date, months) => {
+	var d = date.getDate();
+	date.setMonth(date.getMonth() + +months);
+	// if (date.getDate() != d) {
+	// 	date.setDate(0);
+	// }
+	return date;
 };

@@ -5,7 +5,8 @@ import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
 import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
-import { CONSTANTS, LOG, RESPONSE } from "../utility.js";
+import { DateTime, Interval } from "luxon";
+import { CONSTANTS, LOG, RESPONSE, addMonths } from "../utility.js";
 
 const router = Router();
 
@@ -22,117 +23,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const createFailed = async (user) => {
-	const { _id, cutoff } = user;
-	const date = new Date();
-	const startDate = new Date();
-	const endDate = new Date();
-	switch (cutoff) {
-		case "MID":
-			startDate.setMonth(date.getMonth() - (date.getDate() > 15 ? 1 : 2));
-			startDate.setDate(15);
-			endDate.setMonth(date.getMonth() - (date.getDate() > 15 ? 0 : 1));
-			endDate.setDate(15);
-			break;
-		case "END":
-			startDate.setMonth(date.getMonth());
-			startDate.setDate(0);
-			endDate.setMonth(date.getMonth() + 1);
-			endDate.setDate(0);
-			break;
-		default:
-			return RESPONSE.fail(400, { message: "No cutoff info found." });
-	}
-
-	startDate.setUTCHours(23, 59, 59, 999);
-	endDate.setUTCHours(23, 59, 59, 999);
-
-	const range = {
-		$gte: startDate,
-		$lte: endDate,
-	};
-
-	const hasFailed =
-		(await Receipt.findOne({
-			userRef: _id,
-			receiptDate: range,
-			status: CONSTANTS.RECEIPT_STATUS.failed,
-		})) || "";
-
-	if (!(date > startDate && date < endDate) && !hasFailed) {
-		const formData = {
-			_id: new mongoose.Types.ObjectId(),
-			userRef: user._id,
-			planRef: user.planRef,
-			referenceType: {},
-			referenceNumber: "",
-			receiptName: "",
-			receiptDate: endDate,
-			cutoff: user.cutoff,
-			status: "FAILED",
-		};
-		const SaveReceipt = new Receipt(formData);
-		await SaveReceipt.save();
-	}
-};
-
-// used for checking adding new receipts, if exists +1 month, if status = denied then ignore,
-const getCurrentReceipt = async (req, user) => {
-	const { _id, cutoff } = user;
-
-	const latestReceipt = await Receipt.findOne(
-		{ userRef: _id, status: { $ne: CONSTANTS.RECEIPT_STATUS.denied } },
-		null,
-		{
-			sort: {
-				createdAt: "desc",
-			},
-		}
-	);
-
-	const date = latestReceipt ? new Date(latestReceipt.receiptDate) : new Date(); //"2024-04-11"
-
-	// get date range based on user's chosen cutoff
-	const startDate = new Date();
-	const endDate = new Date();
-	switch (cutoff) {
-		case "MID":
-			if (date.getDate() > 15) {
-				startDate.setMonth(date.getMonth());
-				startDate.setDate(15);
-				endDate.setMonth(date.getMonth() + 1);
-				endDate.setDate(15);
-			} else {
-				startDate.setMonth(date.getMonth() - 1);
-				startDate.setDate(15);
-				endDate.setMonth(date.getMonth());
-				endDate.setDate(15);
-			}
-			break;
-		case "END":
-			startDate.setMonth(date.getMonth());
-			startDate.setDate(0);
-			endDate.setMonth(date.getMonth() + 1);
-			endDate.setDate(0);
-			break;
-		default:
-			return RESPONSE.fail(400, { message: "No cutoff info found." });
-	}
-
-	const range = {
-		$gte: startDate,
-		$lte: endDate,
-	};
-
-	const currentReceipt =
-		(await Receipt.findOne({
-			userRef: _id,
-			receiptDate: range,
-			status: { $nin: ["DENIED"] },
-		})) || "";
-
-	return currentReceipt;
-};
+// check missed months then add failed receipts. move this to cron jobs
+router.use(isLoggedIn, async (req, res, next) => {
+	if (!req.user.admin) await createFailed(req.user.accountNumber);
+	next();
+});
 
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
@@ -163,12 +58,8 @@ router.get("/", isLoggedIn, async (req, res) => {
 		// check if already paid current cutoff
 		const data = {
 			list: receipts.length ? receipts : [],
+			latestReceipt: isAdmin ? null : await getLatestReceipt(user),
 		};
-		if (!isAdmin) {
-			const currentReceipt = await getCurrentReceipt(req, user);
-			!currentReceipt && (await createFailed(user));
-			data.currentReceipt = currentReceipt;
-		}
 		res.status(200).json(RESPONSE.success(200, data));
 	} catch (e) {
 		LOG.error(e);
@@ -183,10 +74,11 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			"_id planRef cutoff"
 		);
 		if (user) {
-			const currentReceipt = await getCurrentReceipt(req, user);
-			const receiptDate = new Date(currentReceipt.receiptDate); //"2024-04-11"
-			console.log("receiptDate", receiptDate);
-			if (currentReceipt) receiptDate.setMonth(receiptDate.getMonth() + 1);
+			const latestReceipt = await getLatestReceipt(user);
+			const receiptDate = latestReceipt
+				? addMonths(latestReceipt.receiptDate, 1)
+				: DateTime.now().toJSDate(); //"2024-04-11"
+
 			const formData = {
 				_id: new mongoose.Types.ObjectId(),
 				userRef: user._id,
@@ -200,11 +92,11 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			};
 			const SaveReceipt = new Receipt(formData);
 			const uploadProcess = await SaveReceipt.save();
-			return res.json(RESPONSE.success(200, uploadProcess));
+			return res.status(200).json(RESPONSE.success(200, uploadProcess));
 		}
 	} catch (e) {
 		LOG.error(e);
-		return res.status(400).json(RESPONSE.fail(400, { e }));
+		return res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -229,5 +121,99 @@ router.post("/update", isLoggedIn, async (req, res) => {
 		return res.status(400).json(RESPONSE.fail(400, { e }));
 	}
 });
+
+const createFailed = async (accountNumber) => {
+	const user = await User.findOne({ accountNumber: accountNumber });
+	const { _id, cutoff, createdAt } = user;
+	const date = DateTime.now();
+	const startDate = DateTime.now().set({ hour: 0, minute: 0, second: 0, millisecond: 1 });
+	const endDate = DateTime.now().set({ hour: 23, minute: 59, second: 59, millisecond: 999 });
+
+	const latestReceiptDate = (await getLatestReceipt(user).receiptDate) || new Date(createdAt);
+	console.log("latestReceiptDate", latestReceiptDate);
+
+	switch (cutoff) {
+		case CONSTANTS.CUTOFF.mid:
+			Object.assign(
+				startDate,
+				startDate.set({ month: date.month - (date.day > 15 ? 0 : 1), day: 17 })
+			);
+			Object.assign(endDate, endDate.set({ month: date.month - (date.day > 15 ? 1 : 0), day: 15 }));
+			break;
+		case CONSTANTS.CUTOFF.end:
+			Object.assign(startDate, startDate.set({ month: date.month - 1, day: 2 }));
+			Object.assign(endDate, endDate.set({ month: date.month, day: 0 }));
+			break;
+		default:
+			return RESPONSE.fail(400, { message: "No cutoff info found." });
+	}
+
+	const range = {
+		$gte: startDate.toJSDate(),
+		$lte: endDate.toJSDate(),
+	};
+
+	// if already has failed for current range don't do shit
+	const hasFailed =
+		(await Receipt.findOne({
+			userRef: _id,
+			receiptDate: range,
+			status: CONSTANTS.RECEIPT_STATUS.failed,
+		})) || "";
+
+	if (!(date > startDate && date < endDate) && !hasFailed) {
+		const formData = {
+			_id: new mongoose.Types.ObjectId(),
+			userRef: user._id,
+			planRef: user.planRef,
+			referenceType: {},
+			referenceNumber: "",
+			receiptName: "",
+			receiptDate: endDate,
+			cutoff: user.cutoff,
+			status: "FAILED",
+		};
+		const SaveReceipt = new Receipt(formData);
+		await SaveReceipt.save();
+	}
+};
+
+const getLatestReceipt = async (user) => {
+	const { _id } = user;
+
+	return await Receipt.findOne(
+		{
+			userRef: _id,
+			status: { $nin: [CONSTANTS.RECEIPT_STATUS.denied, CONSTANTS.RECEIPT_STATUS.failed] },
+		},
+		null,
+		{
+			sort: {
+				createdAt: "desc",
+			},
+		}
+	);
+};
+
+// https://stackoverflow.com/a/26930998
+const monthDiff = (startDate, endDate, roundUpFractionalMonths) => {
+	//Calculate the differences between the start and end dates
+	var yearsDifference = endDate.getFullYear() - startDate.getFullYear();
+	var monthsDifference = endDate.getMonth() - startDate.getMonth();
+	var daysDifference = endDate.getDate() - startDate.getDate();
+
+	var monthCorrection = 0;
+	//If roundUpFractionalMonths is true, check if an extra month needs to be added from rounding up.
+	//The difference is done by ceiling (round up), e.g. 3 months and 1 day will be 4 months.
+	if (roundUpFractionalMonths === true && daysDifference > 0) {
+		monthCorrection = 1;
+	}
+	//If the day difference between the 2 months is negative, the last month is not a whole month.
+	else if (roundUpFractionalMonths !== true && daysDifference < 0) {
+		monthCorrection = -1;
+	}
+
+	return yearsDifference * 12 + monthsDifference + monthCorrection;
+};
 
 export default router;

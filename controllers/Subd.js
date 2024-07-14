@@ -25,9 +25,6 @@ const upload = multer({ storage: storage });
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
-		// const updatedSubds = [];
-		console.log("---", query.filter);
-		// console.log("---", { ...JSON.parse(query.filter), ...{ active: true } });
 		const subdData = await Subd.find(query.filter ? JSON.parse(query.filter) : {})
 			.collation({ locale: "en" })
 			.skip((query.page - 1) * query.limit)
@@ -78,8 +75,6 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 
 router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 	try {
-		console.log("req.file", req.file);
-		console.log("req.body", req.body);
 		const form = {
 			name: req.body.name.toUpperCase(),
 			code: req.body.code.toUpperCase(),
@@ -115,7 +110,6 @@ router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 
 router.delete("/delete", isLoggedIn, async (req, res) => {
 	try {
-		console.log("DELETE: req.body", req.body);
 		const subdRes = await Subd.findOneAndUpdate(
 			{ _id: req.body._id },
 			{ active: false },

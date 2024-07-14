@@ -16,13 +16,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
 		const isAdmin = req.user.admin;
+		console.log(query.filter);
 		if (isAdmin) {
-			const users = await User.find({ admin: false }, null, {
+			const users = await User.find(query.filter ? JSON.parse(query.filter) : {}, null, {
 				skip: (query.page - 1) * query.limit, // Starting Row
 				limit: query.limit, // Ending Row
-				sort: {
-					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
-				},
+				sort: JSON.parse(query.sort),
 			}).populate("subdRef planRef");
 			const data = {
 				list: users.length ? users : [],
@@ -33,7 +32,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 		}
 	} catch (e) {
 		LOG.error(e);
-		res.status(400).json(RESPONSE.fail(400, { e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -68,9 +67,11 @@ router.post("/login", async (req, res) => {
 		const user = await User.findOne(
 			{
 				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
+				status: CONSTANTS.ACCOUNT_STATUS.active,
 			},
 			"-_id"
 		).populate("planRef subdRef");
+
 		if (user) {
 			if (!user.active)
 				return res.status(403).json(
@@ -121,7 +122,6 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		const updateRes = await User.findOneAndUpdate({ _id: req.body._id }, req.body, {
 			new: true,
 		}).populate("subdRef planRef");
-		console.log("updateRes", updateRes);
 		res.status(200).json(RESPONSE.success(200, updateRes));
 	} catch (e) {
 		console.log(RESPONSE.fail(400, { e }));
