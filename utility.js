@@ -6,6 +6,7 @@ export const CONSTANTS = {
 	// refreshTokenAge: 60000 * 60 * 6,
 	accessTokenAge: 10000,
 	refreshTokenAge: 60000 * 60 * 6,
+	verifyEmailTokenAge: 60000 * 60,
 	RECEIPT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",
@@ -13,9 +14,10 @@ export const CONSTANTS = {
 		failed: "FAILED",
 	},
 	ACCOUNT_STATUS: {
-		pending: "PENDING",
-		active: "ACTIVE",
-		deactivated: "DEACTIVATED",
+		STANDARD: "STANDARD", // can login
+		PENDING: "PENDING", // cannot login, ask for password
+		VERIFY: "VERIFY", // passwords accepted. waiting for verificaton.
+		DEACTIVATED: "DEACTIVATED", // cannot login
 	},
 	CUTOFF: {
 		mid: "MID",

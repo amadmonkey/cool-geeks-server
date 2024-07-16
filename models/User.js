@@ -17,7 +17,7 @@ const UserSchema = new Schema(
 		cutoff: { type: String, required: true },
 		admin: { type: Boolean, default: false, required: true },
 		status: { type: String, default: "PENDING", required: true },
-		active: { type: Boolean, default: true, required: true },
+		activated: { type: Boolean, default: false, required: true },
 		createdBy: { type: String, default: "EXTERNAL", required: true },
 	},
 	{ timestamps: true }

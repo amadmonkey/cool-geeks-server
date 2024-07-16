@@ -16,13 +16,16 @@ router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
 		const isAdmin = req.user.admin;
-		console.log(query.filter);
 		if (isAdmin) {
-			const users = await User.find(query.filter ? JSON.parse(query.filter) : {}, null, {
-				skip: (query.page - 1) * query.limit, // Starting Row
-				limit: query.limit, // Ending Row
-				sort: JSON.parse(query.sort),
-			}).populate("subdRef planRef");
+			const users = await User.find(
+				query.filter ? { ...JSON.parse(query.filter), ...{ admin: false } } : { admin: false },
+				null,
+				{
+					skip: (query.page - 1) * query.limit, // Starting Row
+					limit: query.limit, // Ending Row
+					sort: JSON.parse(query.sort),
+				}
+			).populate("subdRef planRef");
 			const data = {
 				list: users.length ? users : [],
 			};
@@ -51,14 +54,23 @@ router.post("/signup", async (req, res) => {
 
 router.post("/create", async (req, res) => {
 	try {
-		await User.create({
+		const test = await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
 		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 	} catch (e) {
-		console.log(e);
-		res.status(400).json(RESPONSE.fail(403, { message: e.message }));
+		console.log(e.code);
+		let message = "";
+		switch (e.code) {
+			case 11000:
+				message = "Email already in use";
+				break;
+			default:
+				message = "Something went wrong";
+				break;
+		}
+		res.status(400).json(RESPONSE.fail(400, { message: message }));
 	}
 });
 
@@ -67,7 +79,6 @@ router.post("/login", async (req, res) => {
 		const user = await User.findOne(
 			{
 				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
-				status: CONSTANTS.ACCOUNT_STATUS.active,
 			},
 			"-_id"
 		).populate("planRef subdRef");

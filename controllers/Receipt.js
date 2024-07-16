@@ -141,8 +141,8 @@ const createFailed = async (accountNumber) => {
 			Object.assign(endDate, endDate.set({ month: date.month - (date.day > 15 ? 1 : 0), day: 15 }));
 			break;
 		case CONSTANTS.CUTOFF.end:
-			Object.assign(startDate, startDate.set({ month: date.month - 1, day: 2 }));
-			Object.assign(endDate, endDate.set({ month: date.month, day: 0 }));
+			Object.assign(startDate, startDate.set({ month: date.month, day: 2 }));
+			Object.assign(endDate, endDate.set({ month: date.month + 1, day: 0 }));
 			break;
 		default:
 			return RESPONSE.fail(400, { message: "No cutoff info found." });
@@ -152,6 +152,8 @@ const createFailed = async (accountNumber) => {
 		$gte: startDate.toJSDate(),
 		$lte: endDate.toJSDate(),
 	};
+
+	console.log("range", range);
 
 	// if already has failed for current range don't do shit
 	const hasFailed =
