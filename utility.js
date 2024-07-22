@@ -7,6 +7,7 @@ export const CONSTANTS = {
 	accessTokenAge: 10000,
 	refreshTokenAge: 60000 * 60 * 6,
 	verifyEmailTokenAge: 60000 * 60,
+	passwordResetTokenAge: 60000 * 10,
 	RECEIPT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",
@@ -16,7 +17,7 @@ export const CONSTANTS = {
 	ACCOUNT_STATUS: {
 		STANDARD: "STANDARD", // can login
 		PENDING: "PENDING", // cannot login, ask for password
-		VERIFY: "VERIFY", // passwords accepted. waiting for verificaton.
+		VERIFY: "VERIFY", // update password. waiting for verificaton from user.
 		DEACTIVATED: "DEACTIVATED", // cannot login
 	},
 	CUTOFF: {
@@ -27,9 +28,11 @@ export const CONSTANTS = {
 
 export const RESPONSE = {
 	success: (code, data) => {
+		LOG.success(code, data);
 		return { status: "SUCCESS", code: code, data: data };
 	},
 	fail: (code, data) => {
+		LOG.error(code, data);
 		return { status: "FAIL", code: code, data: data };
 	},
 };
@@ -60,16 +63,18 @@ const tokenOptions = (maxAge) => {
 		...{ maxAge: maxAge },
 	};
 };
+
 const tokenRemove = async (accountNumber, Token) => {
 	return Token.deleteMany({ accountNumber: accountNumber });
 };
+
+export const getFullUrl = (req) => req.protocol + "://" + req.get("host");
 
 export const TOKEN = {
 	refresh: async (req, res, Token) => {
 		try {
 			console.log(req.body);
 			const refreshToken = req.body.token;
-			console.log("refreshToken 1", refreshToken);
 			const { accountNumber } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 			if (!refreshToken) {
 				tokenRemove(accountNumber, Token);
@@ -78,7 +83,6 @@ export const TOKEN = {
 					.json(RESPONSE.fail(401, { error: "No refresh token found. Redirect to logout" }));
 			}
 
-			// console.log("refreshToken 2", refreshToken);
 			// const existingToken = await Token.findOne({ accountNumber: accountNumber });
 			// if (!existingToken) {
 			// 	tokenRemove(accountNumber, Token);
@@ -87,7 +91,6 @@ export const TOKEN = {
 			// 		.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
 			// }
 
-			console.log("refreshToken 3", refreshToken);
 			jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async (err, user) => {
 				if (err) res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
 
@@ -115,7 +118,6 @@ export const TOKEN = {
 
 				res.cookie("accessToken", accessToken, tokenOptions(CONSTANTS.accessTokenAge));
 				res.cookie("refreshToken", refreshToken, tokenOptions(CONSTANTS.refreshTokenAge));
-				console.log(RESPONSE.success(200, { message: "token refresh successful" }));
 				return res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
 			});
 		} catch (e) {
@@ -131,13 +133,4 @@ export const TOKEN = {
 	},
 	remove: (accountNumber, Token) => tokenRemove(accountNumber, Token),
 	options: (maxAge) => tokenOptions(maxAge),
-};
-
-export const addMonths = (date, months) => {
-	var d = date.getDate();
-	date.setMonth(date.getMonth() + +months);
-	// if (date.getDate() != d) {
-	// 	date.setDate(0);
-	// }
-	return date;
 };

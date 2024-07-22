@@ -25,7 +25,7 @@ const corsOptions = {
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dir = path.join(__dirname, "/uploads");
+const dir = path.join(__dirname, "/public");
 app.use(express.static(dir));
 
 app.use(cors(corsOptions));

@@ -1,18 +1,40 @@
-import nodemailer from "nodemailer";
+import Email from "email-templates";
 
-export const sendMail = async (options) => {
+export const email = ({ send, preview }) => {
 	try {
-		const Transporter = nodemailer.createTransport({
-			host: "smtp.gmail.com",
-			port: 465,
-			secure: true,
-			auth: {
-				user: process.env.EMAIL_ADDRESS,
-				pass: process.env.EMAIL_PASSWORD,
+		// leaving this here might go back to nodemailer
+		// const Transporter = nodemailer.createTransport({
+		// 	host: "smtp.gmail.com",
+		// 	port: 465,
+		// 	secure: true,
+		// 	auth: {
+		// 		user: process.env.EMAIL_ADDRESS,
+		// 		pass: process.env.EMAIL_PASSWORD,
+		// 	},
+		// });
+		// return await Transporter.sendMail(options);
+
+		return new Email({
+			preview: preview,
+			send: send,
+			transport: {
+				// uncomment below for testing
+				// jsonTransport: true,
+				host: "smtp.gmail.com",
+				port: 465,
+				secure: true,
+				auth: {
+					user: process.env.EMAIL_ADDRESS,
+					pass: process.env.EMAIL_PASSWORD,
+				},
 			},
 		});
-		return await Transporter.sendMail(options);
 	} catch (error) {
 		console.log(error);
 	}
+};
+
+export const from = {
+	name: "COOL GEEKS",
+	address: process.env.EMAIL_ADDRESS,
 };

@@ -1,0 +1,30 @@
+doctype html
+html
+head
+    style(type='text/css').
+        .activate-btn {
+            background-color: #5576c7;
+            color: white;
+            font-weight: 800;
+            padding: 20px 50px;
+            border-radius: 10px;
+            margin: 30px auto 30px auto;
+            display: table;
+            align-self: center;
+            flex-wrap: unset;
+            position: relative;
+            text-decoration: none;
+        }
+body
+    include ../header.pug
+    div(style='width: 500px; padding: 20px 30px; display: table; margin: 0 auto')
+        p Hi 
+            strong #{name},
+        p You're almost there! Click the button below to activate your account and automatically login
+        a(href=`${link}` class='activate-btn' style='color: white;') ACTIVATE
+        p(style='text-align: center') Or click 
+            a(href=`${process.env.ORIGIN}/login?u=${accountNumber}`) here
+            |  to go to our login page
+    
+    include ../footer.pug
+    

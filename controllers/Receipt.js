@@ -5,14 +5,14 @@ import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
 import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
-import { DateTime, Interval } from "luxon";
-import { CONSTANTS, LOG, RESPONSE, addMonths } from "../utility.js";
+import { DateTime } from "luxon";
+import { CONSTANTS, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "uploads/receipts");
+		callback(null, "public/uploads/receipts");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
@@ -23,17 +23,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// check missed months then add failed receipts. move this to cron jobs
-router.use(isLoggedIn, async (req, res, next) => {
-	if (!req.user.admin) await createFailed(req.user.accountNumber);
-	next();
-});
-
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
 		const isAdmin = req.user.admin;
 		const user = await User.findOne({ accountNumber: req.user.accountNumber });
+
+		if (!user.admin) await createFailed(req.user.accountNumber);
+
 		const receipts = await Receipt.find(
 			isAdmin ? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } } : { userRef: user._id },
 			null,
@@ -44,17 +41,15 @@ router.get("/", isLoggedIn, async (req, res) => {
 					[query.sortBy]: query.sortOrder.toLowerCase(), //Sort by createdAt DESC
 				},
 			}
-		).populate(
-			isAdmin && [
-				{
-					path: "planRef",
-					populate: {
-						path: "subdRef",
-					},
+		).populate([
+			{
+				path: "planRef",
+				populate: {
+					path: "subdRef",
 				},
-				"userRef",
-			]
-		);
+			},
+			"userRef",
+		]);
 		// check if already paid current cutoff
 		const data = {
 			list: receipts.length ? receipts : [],
@@ -62,8 +57,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 		};
 		res.status(200).json(RESPONSE.success(200, data));
 	} catch (e) {
-		LOG.error(e);
-		res.status(400).json(RESPONSE.fail(400, { e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -76,7 +70,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 		if (user) {
 			const latestReceipt = await getLatestReceipt(user);
 			const receiptDate = latestReceipt
-				? addMonths(latestReceipt.receiptDate, 1)
+				? DateTime.fromISO(latestReceipt.receiptDate).plus({ month: 1 })
 				: DateTime.now().toJSDate(); //"2024-04-11"
 
 			const formData = {
@@ -118,65 +112,86 @@ router.post("/update", isLoggedIn, async (req, res) => {
 		return res.json(RESPONSE.success(200, updatedItem));
 	} catch (e) {
 		LOG.error(e);
-		return res.status(400).json(RESPONSE.fail(400, { e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
+const dateToCutOff = (date, cutOffType) => {
+	return date.set({
+		day: cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day,
+		hour: 23,
+		minute: 59,
+		second: 59,
+		millisecond: 999,
+	});
+};
+
 const createFailed = async (accountNumber) => {
-	const user = await User.findOne({ accountNumber: accountNumber });
-	const { _id, cutoff, createdAt } = user;
-	const date = DateTime.now();
-	const startDate = DateTime.now().set({ hour: 0, minute: 0, second: 0, millisecond: 1 });
-	const endDate = DateTime.now().set({ hour: 23, minute: 59, second: 59, millisecond: 999 });
+	try {
+		const user = await User.findOne({ accountNumber: accountNumber });
+		const { _id, cutoff: cutOffType, createdAt } = user;
 
-	const latestReceiptDate = (await getLatestReceipt(user).receiptDate) || new Date(createdAt);
-	console.log("latestReceiptDate", latestReceiptDate);
+		const d = DateTime.now();
 
-	switch (cutoff) {
-		case CONSTANTS.CUTOFF.mid:
-			Object.assign(
-				startDate,
-				startDate.set({ month: date.month - (date.day > 15 ? 0 : 1), day: 17 })
-			);
-			Object.assign(endDate, endDate.set({ month: date.month - (date.day > 15 ? 1 : 0), day: 15 }));
-			break;
-		case CONSTANTS.CUTOFF.end:
-			Object.assign(startDate, startDate.set({ month: date.month, day: 2 }));
-			Object.assign(endDate, endDate.set({ month: date.month + 1, day: 0 }));
-			break;
-		default:
-			return RESPONSE.fail(400, { message: "No cutoff info found." });
-	}
+		// set last cutoff depending on type (e.g: mid, end)
+		const lastCutoffEndDate = dateToCutOff(
+			d.minus({
+				month: cutOffType === CONSTANTS.CUTOFF.mid ? (d.day > 15 ? 0 : 1) : 1,
+			}),
+			cutOffType
+		);
 
-	const range = {
-		$gte: startDate.toJSDate(),
-		$lte: endDate.toJSDate(),
-	};
+		// get latest receipt. if none, use createdAt to set how many missed months
+		const c = DateTime.fromJSDate(createdAt).plus({ month: 1 }).toJSDate();
+		let latestReceiptDate = DateTime.fromJSDate((await getLatestReceipt(user))?.receiptDate || c);
+		latestReceiptDate = dateToCutOff(latestReceiptDate, cutOffType);
 
-	console.log("range", range);
+		const { months } = lastCutoffEndDate.diff(latestReceiptDate, ["months"]);
 
-	// if already has failed for current range don't do shit
-	const hasFailed =
-		(await Receipt.findOne({
-			userRef: _id,
-			receiptDate: range,
-			status: CONSTANTS.RECEIPT_STATUS.failed,
-		})) || "";
+		// log info
+		LOG.info("======================");
+		LOG.info("+ lastCutoffEndDate:", lastCutoffEndDate);
+		LOG.info("+ latestReceiptDate:", latestReceiptDate);
+		LOG.info("+ monthsDiff:", months);
+		LOG.info("======================");
 
-	if (!(date > startDate && date < endDate) && !hasFailed) {
-		const formData = {
-			_id: new mongoose.Types.ObjectId(),
-			userRef: user._id,
-			planRef: user.planRef,
-			referenceType: {},
-			referenceNumber: "",
-			receiptName: "",
-			receiptDate: endDate,
-			cutoff: user.cutoff,
-			status: "FAILED",
-		};
-		const SaveReceipt = new Receipt(formData);
-		await SaveReceipt.save();
+		if (months) {
+			for (let monthToAdd = 0; monthToAdd < months; monthToAdd++) {
+				const range = {
+					$gte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd }), cutOffType),
+					$lte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd + 1 }), cutOffType),
+				};
+				LOG.info("------- Loop " + (monthToAdd + 1));
+				LOG.info("range", range);
+
+				// // if already has failed for current range don't do shit
+				const hasFailed =
+					(await Receipt.findOne({
+						userRef: _id,
+						receiptDate: range,
+						status: CONSTANTS.RECEIPT_STATUS.failed,
+					})) || null;
+				LOG.info("hasFailed", hasFailed ? true : false);
+
+				if (!hasFailed) {
+					const formData = {
+						_id: new mongoose.Types.ObjectId(),
+						userRef: user._id,
+						planRef: user.planRef,
+						referenceType: {},
+						referenceNumber: "",
+						receiptName: "",
+						receiptDate: range.$gte,
+						cutoff: user.cutoff,
+						status: "FAILED",
+					};
+					// await Receipt.create(formData);
+				}
+			}
+		}
+	} catch (e) {
+		LOG.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 };
 
@@ -186,36 +201,20 @@ const getLatestReceipt = async (user) => {
 	return await Receipt.findOne(
 		{
 			userRef: _id,
-			status: { $nin: [CONSTANTS.RECEIPT_STATUS.denied, CONSTANTS.RECEIPT_STATUS.failed] },
+			status: {
+				$nin: [
+					CONSTANTS.RECEIPT_STATUS.denied,
+					// CONSTANTS.RECEIPT_STATUS.failed
+				],
+			},
 		},
 		null,
 		{
 			sort: {
-				createdAt: "desc",
+				createdAt: -1,
 			},
 		}
 	);
-};
-
-// https://stackoverflow.com/a/26930998
-const monthDiff = (startDate, endDate, roundUpFractionalMonths) => {
-	//Calculate the differences between the start and end dates
-	var yearsDifference = endDate.getFullYear() - startDate.getFullYear();
-	var monthsDifference = endDate.getMonth() - startDate.getMonth();
-	var daysDifference = endDate.getDate() - startDate.getDate();
-
-	var monthCorrection = 0;
-	//If roundUpFractionalMonths is true, check if an extra month needs to be added from rounding up.
-	//The difference is done by ceiling (round up), e.g. 3 months and 1 day will be 4 months.
-	if (roundUpFractionalMonths === true && daysDifference > 0) {
-		monthCorrection = 1;
-	}
-	//If the day difference between the 2 months is negative, the last month is not a whole month.
-	else if (roundUpFractionalMonths !== true && daysDifference < 0) {
-		monthCorrection = -1;
-	}
-
-	return yearsDifference * 12 + monthsDifference + monthCorrection;
 };
 
 export default router;

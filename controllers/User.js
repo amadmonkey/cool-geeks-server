@@ -8,7 +8,8 @@ import User from "../models/User.js";
 import Subd from "../models/Subd.js";
 import Plan from "../models/Plan.js";
 import Token from "../models/Token.js";
-import { CONSTANTS, LOG, RESPONSE, TOKEN } from "../utility.js";
+import { email, from } from "../mailing.js";
+import { CONSTANTS, getFullUrl, LOG, RESPONSE, TOKEN } from "../utility.js";
 
 const router = Router();
 
@@ -22,10 +23,11 @@ router.get("/", isLoggedIn, async (req, res) => {
 				null,
 				{
 					skip: (query.page - 1) * query.limit, // Starting Row
-					limit: query.limit, // Ending Row
+					limit: query.limit || 0, // Ending Row
 					sort: JSON.parse(query.sort),
 				}
 			).populate("subdRef planRef");
+			console.log(users.length);
 			const data = {
 				list: users.length ? users : [],
 			};
@@ -54,20 +56,39 @@ router.post("/signup", async (req, res) => {
 
 router.post("/create", async (req, res) => {
 	try {
-		const test = await User.create({
+		const createRes = await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
+
 		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
+
+		// if dev preview = true, if prod preview = false
+		email({ send: true, preview: false })
+			.send({
+				template: "account-created",
+				message: {
+					to: createRes.email,
+					from: from,
+				},
+				locals: {
+					name: `${createRes.firstName} ${createRes.lastName}`,
+					dirname: getFullUrl(req),
+					accountNumber: createRes.accountNumber,
+					link: `${process.env.ORIGIN}/login?u=${createRes.accountNumber}`,
+				},
+			})
+			.then(console.log)
+			.catch(console.error);
 	} catch (e) {
-		console.log(e.code);
+		console.log(JSON.stringify(e.errors));
 		let message = "";
 		switch (e.code) {
 			case 11000:
 				message = "Email already in use";
 				break;
 			default:
-				message = "Something went wrong";
+				message = e.message;
 				break;
 		}
 		res.status(400).json(RESPONSE.fail(400, { message: message }));
