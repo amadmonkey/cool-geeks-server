@@ -30,7 +30,7 @@ export const email = ({ send, preview }) => {
 			},
 		});
 	} catch (error) {
-		console.log(error);
+		res.status(400).json(RESPONSE.fail(400, { message: error.message }));
 	}
 };
 

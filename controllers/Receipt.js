@@ -96,11 +96,9 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 
 router.post("/update", isLoggedIn, async (req, res) => {
 	try {
-		const updatedItem = await Receipt.findOneAndUpdate(
-			{ _id: req.body.toUpdate },
-			{ status: req.body.newStatus },
-			{ new: true }
-		).populate([
+		const updatedItem = await Receipt.findOneAndUpdate({ _id: req.body._id }, req.body, {
+			new: true,
+		}).populate([
 			{
 				path: "planRef",
 				populate: {
@@ -111,7 +109,6 @@ router.post("/update", isLoggedIn, async (req, res) => {
 		]);
 		return res.json(RESPONSE.success(200, updatedItem));
 	} catch (e) {
-		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
@@ -185,7 +182,7 @@ const createFailed = async (accountNumber) => {
 						cutoff: user.cutoff,
 						status: "FAILED",
 					};
-					// await Receipt.create(formData);
+					await Receipt.create(formData);
 				}
 			}
 		}

@@ -25,13 +25,16 @@ const upload = multer({ storage: storage });
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
-		let filter = {};
-		if (query.filter) {
-			const parsedFilter = JSON.parse(query.filter);
-			filter = { ...parsedFilter, ...{ name: new RegExp(parsedFilter.name, "i") } };
-		}
-		const subdData = await Subd.find(filter ? filter : {})
-			.collation({ locale: "en" })
+		console.log("query", query);
+		// let filter = {};
+		// if (query.filter) {
+		// 	const parsedFilter = JSON.parse(query.filter);
+		// 	// filter = { ...parsedFilter, ...{ name: new RegExp(parsedFilter.name, "i") } };
+		// 	filter = parsedFilter;
+		// }
+		// console.log("filter", filter);
+		const subdData = await Subd.find(query.filter ? JSON.parse(query.filter) : {})
+			.collation({ locale: "en", strength: 2 })
 			.skip((query.page - 1) * query.limit)
 			.limit(query.limit)
 			.sort(JSON.parse(query.sort))
@@ -73,7 +76,6 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 		await Plan.insertMany(plans);
 		res.status(200).json(RESPONSE.success(200, subdRes));
 	} catch (e) {
-		console.log(RESPONSE.fail({ message: e.message }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
@@ -101,7 +103,6 @@ router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 		);
 		return res.json(RESPONSE.success(200, { ...subdRes, ...{ plans: plansRes } }));
 	} catch (e) {
-		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
@@ -117,7 +118,6 @@ router.delete("/delete", isLoggedIn, async (req, res) => {
 		).lean();
 		return res.json(RESPONSE.success(200, subdRes));
 	} catch (e) {
-		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });

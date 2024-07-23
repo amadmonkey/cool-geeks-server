@@ -17,7 +17,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 router.post("/create", isLoggedIn, async (req, res) => {
 	try {
-		console.log("PLAN CREATE", req.body);
 		const plan = await Plan.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...req.body,
@@ -35,7 +34,6 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		});
 		res.status(200).json(RESPONSE.success(200, updateRes));
 	} catch (e) {
-		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });

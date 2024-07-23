@@ -41,7 +41,6 @@ const login = async (req, res, activation) => {
 			},
 			"-_id"
 		).populate("planRef subdRef");
-		console.log("test", user);
 		if (user) {
 			if (user.status === CONSTANTS.ACCOUNT_STATUS.DEACTIVATED)
 				return res.status(403).json(
@@ -51,8 +50,6 @@ const login = async (req, res, activation) => {
 					})
 				);
 
-			console.log("req.body.password", req.body.password);
-			console.log("user.password", user.password);
 			const passwordValid = req.body.password
 				? await bcrypt.compare(req.body.password, user.password)
 				: null;
@@ -199,7 +196,6 @@ router.put("/activate", async (req, res) => {
 				}
 			);
 			if (updatedUser) {
-				console.log("updatedUser", updatedUser);
 				req.body.emailAccountNo = accountNumber;
 				return await login(req, res, true);
 			} else {
@@ -228,7 +224,6 @@ router.put("/reset-password", async (req, res) => {
 				return res.status(403).json(RESPONSE.fail(403, { message: "TOKEN_INVALID" }));
 			}
 
-			console.log("jwt user", user);
 			const updatedUser = await User.findOneAndUpdate(
 				{
 					accountNumber: accountNumber,
@@ -245,7 +240,6 @@ router.put("/reset-password", async (req, res) => {
 			}
 		});
 	} catch (e) {
-		LOG.error("/reset-password", e);
 		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
 	}
 });
@@ -258,8 +252,6 @@ router.put("/reset-password-request", async (req, res) => {
 		const user = await User.findOne({
 			$or: [{ accountNumber: emailAccountNo }, { email: emailAccountNo }],
 		});
-
-		console.log(user);
 
 		if (user) {
 			// generate token

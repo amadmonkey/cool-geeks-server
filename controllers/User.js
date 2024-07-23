@@ -27,7 +27,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 					sort: JSON.parse(query.sort),
 				}
 			).populate("subdRef planRef");
-			console.log(users.length);
 			const data = {
 				list: users.length ? users : [],
 			};
@@ -81,7 +80,6 @@ router.post("/create", async (req, res) => {
 			.then(console.log)
 			.catch(console.error);
 	} catch (e) {
-		console.log(JSON.stringify(e.errors));
 		let message = "";
 		switch (e.code) {
 			case 11000:
@@ -156,7 +154,6 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		}).populate("subdRef planRef");
 		res.status(200).json(RESPONSE.success(200, updateRes));
 	} catch (e) {
-		console.log(RESPONSE.fail(400, { e }));
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });

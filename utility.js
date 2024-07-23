@@ -73,7 +73,6 @@ export const getFullUrl = (req) => req.protocol + "://" + req.get("host");
 export const TOKEN = {
 	refresh: async (req, res, Token) => {
 		try {
-			console.log(req.body);
 			const refreshToken = req.body.token;
 			const { accountNumber } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 			if (!refreshToken) {
@@ -104,7 +103,6 @@ export const TOKEN = {
 
 				// delete token existing tokens
 				const tokenRemoveResponse = await tokenRemove(accountNumber, Token);
-				console.log("tokenRemoveResponse", tokenRemoveResponse);
 
 				// save new token to db
 				const tokenCreateResponse = Token.create({
@@ -114,7 +112,6 @@ export const TOKEN = {
 						token: refreshToken,
 					},
 				});
-				console.log("tokenCreateResponse", tokenCreateResponse);
 
 				res.cookie("accessToken", accessToken, tokenOptions(CONSTANTS.accessTokenAge));
 				res.cookie("refreshToken", refreshToken, tokenOptions(CONSTANTS.refreshTokenAge));
