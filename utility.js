@@ -26,9 +26,21 @@ export const CONSTANTS = {
 	},
 };
 
+export const SEARCH_TYPE = {
+	RECEIPT: {
+		REFNO: "REFNO",
+		USER: "USER",
+		PLAN: "PLAN",
+	},
+};
+
+export const toRegex = (search) => {
+	return { $regex: search, $options: "i" };
+};
+
 export const RESPONSE = {
 	success: (code, data) => {
-		LOG.success(code, data);
+		// LOG.success(code, data);
 		return { status: "SUCCESS", code: code, data: data };
 	},
 	fail: (code, data) => {

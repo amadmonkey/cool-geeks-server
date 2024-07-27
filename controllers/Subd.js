@@ -25,14 +25,8 @@ const upload = multer({ storage: storage });
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
-		console.log("query", query);
-		// let filter = {};
-		// if (query.filter) {
-		// 	const parsedFilter = JSON.parse(query.filter);
-		// 	// filter = { ...parsedFilter, ...{ name: new RegExp(parsedFilter.name, "i") } };
-		// 	filter = parsedFilter;
-		// }
-		// console.log("filter", filter);
+		// console.log("query", query);
+
 		const subdData = await Subd.find(query.filter ? JSON.parse(query.filter) : {})
 			.collation({ locale: "en", strength: 2 })
 			.skip((query.page - 1) * query.limit)
@@ -40,12 +34,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 			.sort(JSON.parse(query.sort))
 			.lean();
 
-		// for (let x = 0; x < subdData.length; x++) {
-		// 	const plans = await Plan.find({ subdRef: subdData[x]._id }).sort({ price: "asc" }).lean();
-		// 	updatedSubds.push({ ...subdData[x], ...{ plans: plans } });
-		// }
-
-		// res.status(200).json(RESPONSE.success(200, updatedSubds));
 		res.status(200).json(RESPONSE.success(200, subdData));
 	} catch (error) {
 		LOG.error(error);
