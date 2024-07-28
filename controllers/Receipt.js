@@ -49,10 +49,16 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 			filter = {
 				...filter,
-				...(Object.keys(parsedFilter.dateRange).length
-					? { createdAt: { $gte: parsedFilter.dateRange.start, $lte: parsedFilter.dateRange.end } }
+				...(parsedFilter.dateRange
+					? Object.keys(parsedFilter.dateRange).length
+						? {
+								createdAt: { $gte: parsedFilter.dateRange.start, $lte: parsedFilter.dateRange.end },
+						  }
+						: {}
 					: {}),
-				...(parsedFilter.cutOffType !== "BOTH" ? { cutoff: parsedFilter.cutOffType } : {}),
+				...(parsedFilter.cutOffType && parsedFilter.cutOffType !== "BOTH"
+					? { cutoff: parsedFilter.cutOffType }
+					: {}),
 				...(parsedFilter.status !== "ALL" ? { status: parsedFilter.status } : {}),
 			};
 
@@ -122,10 +128,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 			console.log("parsed filter", parsedFilter);
 		}
 
-		console.log("filters", filters);
 		console.log("final filter", filter);
 		const receipts = await Receipt.find(filter)
-			.skip((filters.page - 1) * filters.limit)
+			.skip((filters.pagesCurrent - 1) * filters.limit)
 			.limit(filters.limit)
 			.sort(JSON.parse(filters.sort))
 			.collation({ locale: "en", strength: 2 })
@@ -140,11 +145,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 			]);
 
 		const count = await Receipt.countDocuments(filter);
+		console.log(Math.ceil(count / filters.limit));
 
 		// check if already paid current cutoff
 		const data = {
 			list: receipts.length ? receipts : [],
-			count: Math.ceil(count / filters.limit),
+			totalCount: count,
 			latestReceipt: isAdmin ? null : await getLatestReceipt(user),
 		};
 		res.status(200).json(RESPONSE.success(200, data));
