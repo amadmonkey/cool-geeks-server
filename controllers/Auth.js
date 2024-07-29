@@ -5,8 +5,6 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 import User from "../models/User.js";
-import Subd from "../models/Subd.js";
-import Plan from "../models/Plan.js";
 import Token from "../models/Token.js";
 
 import { email, from } from "../mailing.js";
@@ -70,13 +68,11 @@ const login = async (req, res, activation) => {
 					},
 				});
 
-				const subd = await Subd.findOne({ _id: user.subdRef });
-				const plan = await Plan.findOne({ _id: user.planRef });
 				user.password = undefined;
 
 				res.cookie("accessToken", accessToken, TOKEN.options(CONSTANTS.accessTokenAge));
 				res.cookie("refreshToken", refreshToken, TOKEN.options(CONSTANTS.refreshTokenAge));
-				res.status(200).json(RESPONSE.success(200, { user, plan, subd }));
+				res.status(200).json(RESPONSE.success(200, { user }));
 			} else {
 				res.status(400).json(RESPONSE.fail(400, { general: "Email or Password is incorrect" }));
 			}

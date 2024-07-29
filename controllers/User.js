@@ -4,8 +4,9 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
 import User from "../models/User.js";
+import Receipt from "../models/Receipt.js";
 import { email, from } from "../mailing.js";
-import { getFullUrl, LOG, RESPONSE } from "../utility.js";
+import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
@@ -26,6 +27,32 @@ router.get("/", isLoggedIn, async (req, res) => {
 			const data = {
 				list: users.length ? users : [],
 			};
+			res.status(200).json(RESPONSE.success(200, data));
+		} else {
+			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
+		}
+	} catch (e) {
+		LOG.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.get("/dashboard-info", isLoggedIn, async (req, res) => {
+	try {
+		if (req.user.admin) {
+			const pendingReceipts = await Receipt.countDocuments({
+				status: CONSTANTS.RECEIPT_STATUS.pending,
+			});
+			const pendingUsers = await User.countDocuments({ status: CONSTANTS.RECEIPT_STATUS.pending });
+			// check users that have no receipts in current cutoff
+			const overdueAccounts = 0;
+
+			const data = {
+				pendingReceipts,
+				pendingUsers,
+				overdueAccounts,
+			};
+
 			res.status(200).json(RESPONSE.success(200, data));
 		} else {
 			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
