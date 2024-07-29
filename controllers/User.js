@@ -1,15 +1,11 @@
 import "dotenv/config.js";
 import Router from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
 import User from "../models/User.js";
-import Subd from "../models/Subd.js";
-import Plan from "../models/Plan.js";
-import Token from "../models/Token.js";
 import { email, from } from "../mailing.js";
-import { CONSTANTS, getFullUrl, LOG, RESPONSE, TOKEN } from "../utility.js";
+import { getFullUrl, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
@@ -93,60 +89,6 @@ router.post("/create", async (req, res) => {
 	}
 });
 
-router.post("/login", async (req, res) => {
-	try {
-		const user = await User.findOne(
-			{
-				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
-			},
-			"-_id"
-		).populate("planRef subdRef");
-
-		if (user) {
-			if (!user.active)
-				return res.status(403).json(
-					RESPONSE.fail(403, {
-						general:
-							"Account has been deactivated. Please contact [number here] or [number here] for info or reactivation",
-					})
-				);
-			const result = await bcrypt.compare(req.body.password, user.password);
-			if (result) {
-				const userObj = {
-					accountNumber: user.accountNumber,
-					admin: user.admin,
-					generatedVia: "LOGIN",
-				};
-				const accessToken = TOKEN.create(userObj);
-				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
-
-				Token.create({
-					...{ _id: new mongoose.Types.ObjectId() },
-					...{
-						accountNumber: user.accountNumber,
-						token: refreshToken,
-					},
-				});
-
-				const subd = await Subd.findOne({ _id: user.subdRef });
-				const plan = await Plan.findOne({ _id: user.planRef });
-				user.password = undefined;
-
-				res.cookie("accessToken", accessToken, TOKEN.options(CONSTANTS.accessTokenAge));
-				res.cookie("refreshToken", refreshToken, TOKEN.options(CONSTANTS.refreshTokenAge));
-				res.status(200).json(RESPONSE.success(200, { user, plan, subd }));
-			} else {
-				res.status(400).json(RESPONSE.fail(400, { general: "Email or Password is incorrect" }));
-			}
-		} else {
-			res.status(400).json(RESPONSE.fail(400, { general: "User doesn't exist" }));
-		}
-	} catch (e) {
-		console.error(e);
-		res.status(400).json(RESPONSE.fail(400, { e }));
-	}
-});
-
 router.put("/update", isLoggedIn, async (req, res) => {
 	try {
 		const updateRes = await User.findOneAndUpdate({ _id: req.body._id }, req.body, {
@@ -155,17 +97,6 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		res.status(200).json(RESPONSE.success(200, updateRes));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
-	}
-});
-
-router.delete("/logout", async (req, res) => {
-	try {
-		res.clearCookie("accessToken", { path: "/" });
-		res.clearCookie("refreshToken", { path: "/" });
-		LOG.success("LOGOUT", "Logout successful");
-		res.status(200).json(RESPONSE.success(200, { general: "Logout successful" }));
-	} catch (e) {
-		res.status(400).json(RESPONSE.fail(400, e));
 	}
 });
 

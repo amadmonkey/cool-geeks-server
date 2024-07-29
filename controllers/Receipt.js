@@ -39,13 +39,13 @@ router.get("/", isLoggedIn, async (req, res) => {
 			? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } }
 			: { userRef: user._id };
 
-		console.log(filters);
+		// console.log(filters);
 
 		if (filters.query) {
 			const parsedFilter = JSON.parse(filters.query);
 			const s = parsedFilter.search;
 
-			console.log("parsedFilter", parsedFilter);
+			// console.log("parsedFilter", parsedFilter);
 
 			filter = {
 				...filter,
@@ -106,7 +106,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 						const plansRes = await Plan.find({
 							$or: [{ name: toRegex(s) }, { description: toRegex(s) }],
 						}).select("_id");
-						console.log("plansRes", plansRes);
+						// console.log("plansRes", plansRes);
 						filter = {
 							...filter,
 							...{
@@ -125,10 +125,10 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 			// search in users by name, loop users then get receipts by those users
 
-			console.log("parsed filter", parsedFilter);
+			// console.log("parsed filter", parsedFilter);
 		}
 
-		console.log("final filter", filter);
+		// console.log("final filter", filter);
 		const receipts = await Receipt.find(filter)
 			.skip((filters.pagesCurrent - 1) * filters.limit)
 			.limit(filters.limit)
@@ -145,7 +145,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			]);
 
 		const count = await Receipt.countDocuments(filter);
-		console.log(Math.ceil(count / filters.limit));
+		// console.log(Math.ceil(count / filters.limit));
 
 		// check if already paid current cutoff
 		const data = {
@@ -156,6 +156,23 @@ router.get("/", isLoggedIn, async (req, res) => {
 		res.status(200).json(RESPONSE.success(200, data));
 	} catch (e) {
 		console.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.get("/reason", isLoggedIn, async (req, res) => {
+	try {
+		const { query } = req;
+		const filters = JSON.parse(query.filter);
+
+		if (!filters) res.status(400).json(RESPONSE.fail(400, { message: "No receipt found" }));
+
+		const reasonRes = await ReceiptReason.findOne(filters);
+
+		console.log(reasonRes);
+
+		res.status(200).json(RESPONSE.success(200, reasonRes));
+	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
@@ -194,7 +211,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 	}
 });
 
-router.post("/update", isLoggedIn, async (req, res) => {
+router.put("/update", isLoggedIn, async (req, res) => {
 	try {
 		const form = req.body;
 
@@ -225,7 +242,7 @@ router.post("/update", isLoggedIn, async (req, res) => {
 	}
 });
 
-router.put("/update", isLoggedIn, upload.single("receipt"), async (req, res) => {
+router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) => {
 	try {
 		const form = req.body;
 		console.log("form", form);
@@ -240,19 +257,7 @@ router.put("/update", isLoggedIn, upload.single("receipt"), async (req, res) => 
 		const receiptRes = await Receipt.findOneAndUpdate({ _id: form._id }, formData, {
 			new: true,
 		}).lean();
-		// const plansRes = await Plan.find({ subdRef: subdRes._id }).catch((error) =>
-		// 	res.status(400).json(RESPONSE.fail(400, { error }))
-		// );
 		res.json(RESPONSE.success(200, receiptRes));
-
-		// if (form.rejectReason) {
-		// 	await ReceiptReason.create({
-		// 		...{ _id: new mongoose.Types.ObjectId() },
-		// 		...{ receiptRef: updatedItem._id, content: form.rejectReason },
-		// 	});
-		// }
-
-		// return res.json(RESPONSE.success(200, updatedItem));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
@@ -291,11 +296,11 @@ const createFailed = async (accountNumber) => {
 		const { months } = lastCutoffEndDate.diff(latestReceiptDate, ["months"]);
 
 		// log info
-		LOG.info("======================");
-		LOG.info("+ lastCutoffEndDate:", lastCutoffEndDate);
-		LOG.info("+ latestReceiptDate:", latestReceiptDate);
-		LOG.info("+ monthsDiff:", months);
-		LOG.info("======================");
+		// LOG.info("======================");
+		// LOG.info("+ lastCutoffEndDate:", lastCutoffEndDate);
+		// LOG.info("+ latestReceiptDate:", latestReceiptDate);
+		// LOG.info("+ monthsDiff:", months);
+		// LOG.info("======================");
 
 		if (months) {
 			for (let monthToAdd = 0; monthToAdd < months; monthToAdd++) {
