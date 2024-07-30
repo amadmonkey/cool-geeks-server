@@ -1,8 +1,9 @@
 import mongoose from "../db/connection.js";
+import { SchemaTypes } from "mongoose";
 
 const TokenSchema = new mongoose.Schema(
 	{
-		_id: { type: String, required: true },
+		_id: { type: SchemaTypes.ObjectId, required: true },
 		accountNumber: { type: String, required: true },
 		token: { type: String, required: true },
 	},

@@ -1,70 +1,129 @@
 import "dotenv/config.js";
 import Router from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import isLoggedIn from "./middleware.js";
 import User from "../models/User.js";
-import Subd from "../models/Subd.js";
-import Plan from "../models/Plan.js";
-import Token from "../models/Token.js";
-import { CONSTANTS, LOG, RESPONSE, TOKEN } from "../utility.js";
+import Receipt from "../models/Receipt.js";
+import { email, from } from "../mailing.js";
+import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
+
+router.get("/", isLoggedIn, async (req, res) => {
+	try {
+		const { query } = req;
+		const isAdmin = req.user.admin;
+		if (isAdmin) {
+			const users = await User.find(
+				query.filter ? { ...JSON.parse(query.filter), ...{ admin: false } } : { admin: false },
+				null,
+				{
+					skip: (query.page - 1) * query.limit, // Starting Row
+					limit: query.limit || 0, // Ending Row
+					sort: JSON.parse(query.sort),
+				}
+			).populate("subdRef planRef");
+			const data = {
+				list: users.length ? users : [],
+			};
+			res.status(200).json(RESPONSE.success(200, data));
+		} else {
+			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
+		}
+	} catch (e) {
+		LOG.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.get("/dashboard-info", isLoggedIn, async (req, res) => {
+	try {
+		if (req.user.admin) {
+			const pendingReceipts = await Receipt.countDocuments({
+				status: CONSTANTS.RECEIPT_STATUS.pending,
+			});
+			const pendingUsers = await User.countDocuments({ status: CONSTANTS.RECEIPT_STATUS.pending });
+			// check users that have no receipts in current cutoff
+			const overdueAccounts = 0;
+
+			const data = {
+				pendingReceipts,
+				pendingUsers,
+				overdueAccounts,
+			};
+
+			res.status(200).json(RESPONSE.success(200, data));
+		} else {
+			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
+		}
+	} catch (e) {
+		LOG.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
 
 router.post("/signup", async (req, res) => {
 	try {
 		req.body.password = await bcrypt.hash(req.body.password, 10);
-		const user = await User.create({
+		await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...req.body,
 		});
-		res.json(user);
+		res.status(200).json(RESPONSE.success(200, { general: "Registration successful" }));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(403, { e }));
 	}
 });
 
-router.post("/login", async (req, res) => {
+router.post("/create", async (req, res) => {
 	try {
-		const user = await User.findOne(
-			{
-				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
-			},
-			"-_id"
-		);
-		if (user) {
-			const result = await bcrypt.compare(req.body.password, user.password);
-			if (result) {
-				const userObj = {
-					accountNumber: user.accountNumber,
-					generatedVia: "login",
-				};
-				const accessToken = TOKEN.create(userObj);
-				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
+		const createRes = await User.create({
+			...{ _id: new mongoose.Types.ObjectId() },
+			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
+		});
 
-				Token.create({
-					...{ _id: new mongoose.Types.ObjectId() },
-					...{
-						accountNumber: user.accountNumber,
-						token: refreshToken,
-					},
-				});
+		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 
-				const subd = await Subd.findOne({ _id: user.subdId });
-				const plan = await Plan.findOne({ _id: user.planId });
-				user.password = undefined;
-
-				res.cookie("accessToken", accessToken, TOKEN.options(CONSTANTS.accessTokenAge));
-				res.cookie("refreshToken", refreshToken, TOKEN.options(CONSTANTS.refreshTokenAge));
-				res.status(200).json(RESPONSE.success(200, { user, plan, subd }));
-			} else {
-				res.status(400).json(RESPONSE.fail(400, { general: "Email or Password is incorrect" }));
-			}
-		} else {
-			res.status(400).json(RESPONSE.fail(400, { general: "User doesn't exist" }));
-		}
+		// if dev preview = true, if prod preview = false
+		email({ send: true, preview: false })
+			.send({
+				template: "account-created",
+				message: {
+					to: createRes.email,
+					from: from,
+				},
+				locals: {
+					name: `${createRes.firstName} ${createRes.lastName}`,
+					dirname: getFullUrl(req),
+					accountNumber: createRes.accountNumber,
+					link: `${process.env.ORIGIN}/login?u=${createRes.accountNumber}`,
+				},
+			})
+			.then(console.log)
+			.catch(console.error);
 	} catch (e) {
-		res.status(400).json(RESPONSE.fail(400, { e }));
+		let message = "";
+		switch (e.code) {
+			case 11000:
+				message = "Email already in use";
+				break;
+			default:
+				message = e.message;
+				break;
+		}
+		res.status(400).json(RESPONSE.fail(400, { message: message }));
+	}
+});
+
+router.put("/update", isLoggedIn, async (req, res) => {
+	try {
+		const updateRes = await User.findOneAndUpdate({ _id: req.body._id }, req.body, {
+			new: true,
+		}).populate("subdRef planRef");
+		res.status(200).json(RESPONSE.success(200, updateRes));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 

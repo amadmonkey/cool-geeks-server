@@ -4,45 +4,109 @@ import Router from "express";
 import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
 import Subd from "../models/Subd.js";
+import Plan from "../models/Plan.js";
+import { LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "uploads/qr");
+		callback(null, "public/uploads/qr");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
 		const ext = extArray[extArray.length - 1];
-		callback(null, `${req.user.accountNumber}.${Date.now()}.${ext}`);
+		callback(null, file.originalname);
 	},
 });
 
 const upload = multer({ storage: storage });
 
 router.get("/", isLoggedIn, async (req, res) => {
-	res.json(await Subd.find().catch((error) => res.status(400).json(RESPONSE.fail(400, { error }))));
+	try {
+		const { query } = req;
+		// console.log("query", query);
+
+		const subdData = await Subd.find(query.filter ? JSON.parse(query.filter) : {})
+			.collation({ locale: "en", strength: 2 })
+			.skip((query.page - 1) * query.limit)
+			.limit(query.limit)
+			.sort(JSON.parse(query.sort))
+			.lean();
+
+		res.status(200).json(RESPONSE.success(200, subdData));
+	} catch (error) {
+		LOG.error(error);
+		res.status(400).json(RESPONSE.fail(400, { error }));
+	}
 });
 
-router.post("/create", isLoggedIn, upload.single("gcashQR"), async (req, res) => {
+router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 	try {
-		const formData = {
+		const form = {
 			_id: new mongoose.Types.ObjectId(),
 			name: req.body.name,
-			code: req.body.code,
+			code: req.body.code.toUpperCase(),
 			gcash: {
 				qr: {
 					filename: req.file.filename,
 					contentType: req.file.mimetype,
 				},
-				number: req.body.gcashNo,
+				number: req.body.number,
 			},
 		};
-		// const SaveSubd = new Subd(formData);
-		// const uploadProcess = await SaveSubd.save();
-		// res.json(uploadProcess);
+		const SaveSubd = new Subd(form);
+		const subdRes = await SaveSubd.save();
+		const plans = JSON.parse(req.body.plans).map((plan) => ({
+			...plan,
+			...{ _id: new mongoose.Types.ObjectId(), subdRef: subdRes._id },
+		}));
+		await Plan.insertMany(plans);
+		res.status(200).json(RESPONSE.success(200, subdRes));
 	} catch (e) {
-		res.status(400).json(RESPONSE.error({ e }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
+	try {
+		const form = {
+			name: req.body.name.toUpperCase(),
+			code: req.body.code.toUpperCase(),
+			plans: null,
+			gcash: {
+				qr: {
+					filename: req.file.originalname,
+					contentType: req.file.mimetype,
+				},
+				number: req.body.number,
+			},
+		};
+
+		const subdRes = await Subd.findOneAndUpdate({ _id: req.body._id }, form, {
+			new: true,
+		}).lean();
+		const plansRes = await Plan.find({ subdRef: subdRes._id }).catch((error) =>
+			res.status(400).json(RESPONSE.fail(400, { error }))
+		);
+		return res.json(RESPONSE.success(200, { ...subdRes, ...{ plans: plansRes } }));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.delete("/delete", isLoggedIn, async (req, res) => {
+	try {
+		const subdRes = await Subd.findOneAndUpdate(
+			{ _id: req.body._id },
+			{ active: false },
+			{
+				new: true,
+			}
+		).lean();
+		return res.json(RESPONSE.success(200, subdRes));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 

@@ -1,10 +1,13 @@
 import mongoose from "../db/connection.js";
+import { SchemaTypes } from "mongoose";
 
 const SubdSchema = new mongoose.Schema(
 	{
-		_id: { type: String, required: true },
+		_id: { type: SchemaTypes.ObjectId, required: true },
 		name: { type: String, required: true },
 		code: { type: String, required: true },
+		code: { type: String, required: true },
+		plans: {},
 		gcash: {
 			qr: {
 				filename: { type: String, required: true },
@@ -12,6 +15,7 @@ const SubdSchema = new mongoose.Schema(
 			},
 			number: { type: String, required: true },
 		},
+		active: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }
 );
