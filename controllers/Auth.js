@@ -60,13 +60,13 @@ const login = async (req, res, activation) => {
 				const accessToken = TOKEN.create(userObj);
 				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
 
-				Token.create({
-					...{ _id: new mongoose.Types.ObjectId() },
-					...{
-						accountNumber: user.accountNumber,
-						token: refreshToken,
-					},
-				});
+				// Token.create({
+				// 	...{ _id: new mongoose.Types.ObjectId() },
+				// 	...{
+				// 		accountNumber: user.accountNumber,
+				// 		token: refreshToken,
+				// 	},
+				// });
 
 				user.password = undefined;
 

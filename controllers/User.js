@@ -27,9 +27,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 			const data = {
 				list: users.length ? users : [],
 			};
-			res.status(200).json(RESPONSE.success(200, data));
+			return res.status(200).json(RESPONSE.success(200, data));
 		} else {
-			res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
+			return res.status(400).json(RESPONSE.fail(400, { message: "User not authorized" }));
 		}
 	} catch (e) {
 		LOG.error(e);
