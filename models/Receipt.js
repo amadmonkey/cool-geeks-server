@@ -4,6 +4,7 @@ import { SchemaTypes } from "mongoose";
 const ReceiptSchema = new mongoose.Schema(
 	{
 		_id: { type: SchemaTypes.ObjectId, required: true },
+		gdriveId: { type: String },
 		userRef: { type: SchemaTypes.ObjectId, ref: "User", required: true },
 		planRef: { type: SchemaTypes.ObjectId, ref: "Plan", required: true },
 		referenceType: { type: Object, required: true },

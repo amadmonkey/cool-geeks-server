@@ -4,8 +4,8 @@ import { SchemaTypes } from "mongoose";
 const SubdSchema = new mongoose.Schema(
 	{
 		_id: { type: SchemaTypes.ObjectId, required: true },
+		gdriveId: { type: String },
 		name: { type: String, required: true },
-		code: { type: String, required: true },
 		code: { type: String, required: true },
 		plans: {},
 		gcash: {
@@ -15,6 +15,7 @@ const SubdSchema = new mongoose.Schema(
 			},
 			number: { type: String, required: true },
 		},
+
 		active: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }

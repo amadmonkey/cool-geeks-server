@@ -6,6 +6,7 @@ import isLoggedIn from "./middleware.js";
 import Subd from "../models/Subd.js";
 import Plan from "../models/Plan.js";
 import { LOG, RESPONSE } from "../utility.js";
+import { GoogleDriveService } from "../googleDriveService.js";
 
 const router = Router();
 
@@ -55,7 +56,17 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 				number: req.body.number,
 			},
 		};
-		const SaveSubd = new Subd(form);
+
+		// gdrive upload file
+		const googleDriveService = new GoogleDriveService();
+		const folderId = "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz";
+		const gdriveId = await googleDriveService
+			.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+			.catch((error) => {
+				throw error;
+			});
+
+		const SaveSubd = new Subd({ ...form, ...{ gdriveId: gdriveId } });
 		const subdRes = await SaveSubd.save();
 		const plans = JSON.parse(req.body.plans).map((plan) => ({
 			...plan,
@@ -68,9 +79,26 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 	}
 });
 
+router.get("/image", async (req, res) => {
+	try {
+		const { query } = req;
+		const googleDriveService = new GoogleDriveService();
+		const gdriveRes = await googleDriveService.downloadFile(query.id);
+		console.log(gdriveRes.data);
+
+		res.header("Content-Type", "image/jpeg");
+		res.header("Content-Length", gdriveRes.data.size);
+		gdriveRes.data.stream().pipe(res);
+	} catch (e) {
+		console.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
 router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 	try {
 		const form = {
+			gdriveId: req.body.gdriveId,
 			name: req.body.name.toUpperCase(),
 			code: req.body.code.toUpperCase(),
 			plans: null,
@@ -83,9 +111,31 @@ router.put("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 			},
 		};
 
-		const subdRes = await Subd.findOneAndUpdate({ _id: req.body._id }, form, {
-			new: true,
-		}).lean();
+		console.log(req.body);
+
+		const googleDriveService = new GoogleDriveService();
+		const folderId = "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz";
+
+		// delete old file
+		if (form.gdriveId) {
+			const gdriveDeleteRes = await googleDriveService.deleteFile(form.gdriveId);
+			console.log("gdriveDeleteRes", gdriveDeleteRes);
+		}
+
+		// create new file
+		const gdriveId = await googleDriveService
+			.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+			.catch((error) => {
+				throw error;
+			});
+
+		const subdRes = await Subd.findOneAndUpdate(
+			{ _id: req.body._id },
+			{ ...form, ...{ gdriveId: gdriveId } },
+			{
+				new: true,
+			}
+		).lean();
 		const plansRes = await Plan.find({ subdRef: subdRes._id }).catch((error) =>
 			res.status(400).json(RESPONSE.fail(400, { error }))
 		);
