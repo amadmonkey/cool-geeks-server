@@ -2,21 +2,23 @@ import "dotenv/config.js";
 import multer from "multer";
 import Router from "express";
 import mongoose from "mongoose";
-import isLoggedIn from "./middleware.js";
 import { DateTime } from "luxon";
 
+import isLoggedIn from "./middleware.js";
 import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
 import Plan from "../models/Plan.js";
 import ReceiptReason from "../models/ReceiptReason.js";
 
 import { CONSTANTS, LOG, RESPONSE, SEARCH_TYPE, toRegex } from "../utility.js";
+import { GoogleDriveService } from "../googleDriveService.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
 		callback(null, "public/uploads/receipts");
+		// callback(null, "https://www.googleapis.com/upload/drive/v3/files?uploadType=media");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
@@ -26,6 +28,27 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+router.get("/test", async (req, res) => {
+	const googleDriveService = new GoogleDriveService();
+	console.log(await googleDriveService.createFolder("qr"));
+});
+
+router.get("/image", async (req, res) => {
+	try {
+		const { query } = req;
+		const googleDriveService = new GoogleDriveService();
+		const gdriveRes = await googleDriveService.downloadFile(query.id);
+		console.log(gdriveRes.data);
+
+		res.header("Content-Type", "image/jpeg");
+		res.header("Content-Length", gdriveRes.data.size);
+		gdriveRes.data.stream().pipe(res);
+	} catch (e) {
+		console.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
 
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
@@ -39,13 +62,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 			? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } }
 			: { userRef: user._id };
 
-		// console.log(filters);
-
 		if (filters.query) {
 			const parsedFilter = JSON.parse(filters.query);
 			const s = parsedFilter.search;
-
-			// console.log("parsedFilter", parsedFilter);
 
 			filter = {
 				...filter,
@@ -106,7 +125,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 						const plansRes = await Plan.find({
 							$or: [{ name: toRegex(s) }, { description: toRegex(s) }],
 						}).select("_id");
-						// console.log("plansRes", plansRes);
 						filter = {
 							...filter,
 							...{
@@ -122,13 +140,8 @@ router.get("/", isLoggedIn, async (req, res) => {
 						break;
 				}
 			}
-
-			// search in users by name, loop users then get receipts by those users
-
-			// console.log("parsed filter", parsedFilter);
 		}
 
-		// console.log("final filter", filter);
 		const receipts = await Receipt.find(filter)
 			.skip((filters.pagesCurrent - 1) * filters.limit)
 			.limit(filters.limit)
@@ -145,7 +158,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 			]);
 
 		const count = await Receipt.countDocuments(filter);
-		// console.log(Math.ceil(count / filters.limit));
 
 		// check if already paid current cutoff
 		const data = {
@@ -183,14 +195,25 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			{ accountNumber: req.user.accountNumber },
 			"_id planRef cutoff"
 		);
+
 		if (user) {
 			const latestReceipt = await getLatestReceipt(user);
 			const receiptDate = latestReceipt
 				? DateTime.fromJSDate(latestReceipt.receiptDate).plus({ month: 1 })
 				: DateTime.now().toJSDate(); //"2024-04-11"
 
+			// gdrive upload file
+			const googleDriveService = new GoogleDriveService();
+			const folderId = "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ";
+			const gdriveId = await googleDriveService
+				.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+				.catch((error) => {
+					throw error;
+				});
+
 			const formData = {
 				_id: new mongoose.Types.ObjectId(),
+				gdriveId: gdriveId,
 				userRef: user._id,
 				planRef: user.planRef,
 				referenceType: JSON.parse(req.body.referenceType),
@@ -211,6 +234,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 	}
 });
 
+// update db fields
 router.put("/update", isLoggedIn, async (req, res) => {
 	try {
 		const form = req.body;
@@ -242,6 +266,7 @@ router.put("/update", isLoggedIn, async (req, res) => {
 	}
 });
 
+// update receipt image
 router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) => {
 	try {
 		const form = req.body;
@@ -252,17 +277,34 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			status: CONSTANTS.RECEIPT_STATUS.pending,
 		};
 
-		console.log("formData", formData);
+		const googleDriveService = new GoogleDriveService();
+		const folderId = "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ";
 
-		const receiptRes = await Receipt.findOneAndUpdate({ _id: form._id }, formData, {
-			new: true,
-		}).lean();
+		// delete old file
+		const gdriveDeleteRes = await googleDriveService.deleteFile(form.gdriveId);
+		console.log("gdriveDeleteRes", gdriveDeleteRes);
+
+		// create new file
+		const gdriveId = await googleDriveService
+			.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+			.catch((error) => {
+				throw error;
+			});
+
+		const receiptRes = await Receipt.findOneAndUpdate(
+			{ _id: form._id },
+			{ ...formData, ...{ gdriveId: gdriveId } },
+			{
+				new: true,
+			}
+		).lean();
 		res.json(RESPONSE.success(200, receiptRes));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
+// TODO: convert to luxon
 const dateToCutOff = (date, cutOffType) => {
 	return date.set({
 		day: cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day,
@@ -295,21 +337,12 @@ const createFailed = async (accountNumber) => {
 
 		const { months } = lastCutoffEndDate.diff(latestReceiptDate, ["months"]);
 
-		// log info
-		// LOG.info("======================");
-		// LOG.info("+ lastCutoffEndDate:", lastCutoffEndDate);
-		// LOG.info("+ latestReceiptDate:", latestReceiptDate);
-		// LOG.info("+ monthsDiff:", months);
-		// LOG.info("======================");
-
 		if (months) {
 			for (let monthToAdd = 0; monthToAdd < months; monthToAdd++) {
 				const range = {
 					$gte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd }), cutOffType),
 					$lte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd + 1 }), cutOffType),
 				};
-				LOG.info("------- Loop " + (monthToAdd + 1));
-				LOG.info("range", range);
 
 				// // if already has failed for current range don't do shit
 				const hasFailed =
