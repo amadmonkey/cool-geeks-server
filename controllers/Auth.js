@@ -81,7 +81,7 @@ const login = async (req, res, activation) => {
 		}
 	} catch (e) {
 		console.error(e);
-		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: JSON.stringify(e) }));
 	}
 };
 
