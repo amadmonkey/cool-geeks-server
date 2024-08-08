@@ -57,16 +57,9 @@ const login = async (req, res, activation) => {
 					admin: user.admin,
 					generatedVia: "LOGIN",
 				};
+				console.error("LOGIN userObj", userObj);
 				const accessToken = TOKEN.create(userObj);
 				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
-
-				// Token.create({
-				// 	...{ _id: new mongoose.Types.ObjectId() },
-				// 	...{
-				// 		accountNumber: user.accountNumber,
-				// 		token: refreshToken,
-				// 	},
-				// });
 
 				user.password = undefined;
 
@@ -74,14 +67,16 @@ const login = async (req, res, activation) => {
 				res.cookie("refreshToken", refreshToken, TOKEN.options(CONSTANTS.refreshTokenAge));
 				res.status(200).json(RESPONSE.success(200, { user }));
 			} else {
-				res.status(400).json(RESPONSE.fail(400, { general: "Email or Password is incorrect" }));
+				return res
+					.status(400)
+					.json(RESPONSE.fail(400, { general: "Email or Password is incorrect" }));
 			}
 		} else {
-			res.status(400).json(RESPONSE.fail(400, { general: "User doesn't exist" }));
+			return res.status(400).json(RESPONSE.fail(400, { general: "User doesn't exist" }));
 		}
 	} catch (e) {
-		console.error(e);
-		res.status(400).json(RESPONSE.fail(400, { message: JSON.stringify(e) }));
+		console.error("LOGIN CATCH", e);
+		return res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 };
 
