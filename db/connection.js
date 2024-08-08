@@ -2,14 +2,11 @@ import "dotenv/config.js";
 import { mongoose } from "mongoose";
 import { LOG } from "../utility.js";
 
-//DESTRUCTURE ENV VARIABLES
+// DESTRUCTURE ENV VARIABLES
 const { DATABASE_URL } = process.env;
 
 // CONNECT TO MONGO
-mongoose.connect(DATABASE_URL, {
-	useNewUrlParser: true,
-	useUnifiedTopology: true,
-});
+mongoose.connect(DATABASE_URL);
 
 // CONNECTION EVENTS
 mongoose.connection
