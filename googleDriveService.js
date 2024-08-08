@@ -103,7 +103,7 @@ export class GoogleDriveService {
 		}
 	}
 
-	async saveFile(filename, destination, mimetype, folder) {
+	async saveFile(filename, path, mimetype, folder) {
 		const requestBody = {
 			name: filename,
 			fields: "id",
@@ -112,7 +112,7 @@ export class GoogleDriveService {
 
 		const media = {
 			mimeType: mimetype,
-			body: fs.createReadStream(`${destination}/${filename}`),
+			body: fs.createReadStream(path),
 		};
 		try {
 			const file = await this.service.files.create({
