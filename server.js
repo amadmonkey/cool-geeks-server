@@ -11,7 +11,7 @@ import PlanRouter from "./controllers/Plan.js";
 import TokenRouter from "./controllers/Token.js";
 import ReceiptRouter from "./controllers/Receipt.js";
 
-import { LOG } from "./utility.js";
+import { LOG, RESPONSE } from "./utility.js";
 
 const { PORT } = process.env;
 
@@ -34,7 +34,8 @@ app.get("/", (_, res) => {
 	try {
 		res.status(200).json(RESPONSE.success(200, { message: "Server is up and running" }));
 	} catch (e) {
-		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
+		LOG.info("ROOT CATCH", e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
