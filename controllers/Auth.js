@@ -288,6 +288,8 @@ router.put("/reset-password-request", async (req, res) => {
 	}
 });
 
+router.get("/is-up", async () => res.status(200).json(true));
+
 router.get("/email-test", async (req, res) => {
 	const { query } = req;
 	const accountNumber = query.u || "PES-2024-0007";
