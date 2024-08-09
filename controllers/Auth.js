@@ -288,7 +288,7 @@ router.put("/reset-password-request", async (req, res) => {
 	}
 });
 
-router.get("/is-up", () => {
+router.get("/is-up", (req, res) => {
 	res.set("Content-Type", "text/html");
 	res.send(Buffer.from("<h2>loaded</h2>"));
 });
