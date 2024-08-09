@@ -288,7 +288,10 @@ router.put("/reset-password-request", async (req, res) => {
 	}
 });
 
-router.get("/is-up", async () => res.status(200).json(true));
+router.get("/is-up", () => {
+	res.set("Content-Type", "text/html");
+	res.send(Buffer.from("<h2>loaded</h2>"));
+});
 
 router.get("/email-test", async (req, res) => {
 	const { query } = req;
