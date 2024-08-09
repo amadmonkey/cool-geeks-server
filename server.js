@@ -1,6 +1,5 @@
 import "dotenv/config.js";
 import express from "express";
-import morgan from "morgan";
 import cors from "cors";
 import path from "path";
 import url from "url";
@@ -9,8 +8,8 @@ import AuthRouter from "./controllers/Auth.js";
 import UserRouter from "./controllers/User.js";
 import SubdRouter from "./controllers/Subd.js";
 import PlanRouter from "./controllers/Plan.js";
-import ReceiptRouter from "./controllers/Receipt.js";
 import TokenRouter from "./controllers/Token.js";
+import ReceiptRouter from "./controllers/Receipt.js";
 
 import { LOG } from "./utility.js";
 
@@ -29,11 +28,14 @@ const dir = path.join(__dirname, "/public");
 app.use(express.static(dir));
 
 app.use(cors(corsOptions));
-app.use(morgan("tiny"));
 app.use(express.json());
 
 app.get("/", (_, res) => {
-	res.send("this is the test route to make sure server is working");
+	try {
+		res.status(200).json(RESPONSE.success(200, { message: "Server is up and running" }));
+	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
+	}
 });
 
 app.use("/auth", AuthRouter);
@@ -43,4 +45,7 @@ app.use("/plan", PlanRouter);
 app.use("/token", TokenRouter);
 app.use("/receipt", ReceiptRouter);
 
-app.listen(PORT, () => LOG.success(`SERVER STATUS: Listening on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", (err) => {
+	if (err) throw err;
+	LOG.success(`SERVER STATUS: Listening on port ${PORT}`);
+});
