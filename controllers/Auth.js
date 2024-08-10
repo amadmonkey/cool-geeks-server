@@ -21,8 +21,11 @@ const getUser = async (emailAccountNo) =>
 router.get("/", async (req, res) => {
 	try {
 		const { query } = req;
+		console.log(query);
 		const input = JSON.parse(query.filter).input;
+		console.log(input);
 		const user = await getUser(input);
+		console.log(user);
 		res.status(200).json(RESPONSE.success(200, user || { status: null }));
 	} catch (e) {
 		LOG.error(e);
