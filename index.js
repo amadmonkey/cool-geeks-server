@@ -1,90 +1,52 @@
-import { promises as fs } from "fs";
-import { join } from "path";
-import { cwd } from "process";
-import { authenticate } from "@google-cloud/local-auth";
-import { google } from "googleapis";
+import "dotenv/config.js";
+import express from "express";
+import cors from "cors";
+import path from "path";
+import url from "url";
 
-// If modifying these scopes, delete token.json.
-const SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
-const TOKEN_PATH = join(cwd(), "token.json");
-const CREDENTIALS_PATH = join(cwd(), "credentials.json");
+import AuthRouter from "./controllers/Auth.js";
+import UserRouter from "./controllers/User.js";
+import SubdRouter from "./controllers/Subd.js";
+import PlanRouter from "./controllers/Plan.js";
+import TokenRouter from "./controllers/Token.js";
+import ReceiptRouter from "./controllers/Receipt.js";
 
-/**
- * Reads previously authorized credentials from the save file.
- *
- * @return {Promise<OAuth2Client|null>}
- */
-async function loadSavedCredentialsIfExist() {
+import { LOG, RESPONSE } from "./utility.js";
+
+const { PORT } = process.env;
+
+const app = express();
+
+const corsOptions = {
+	origin: process.env.origin || 4000,
+	credentials: true,
+};
+
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dir = path.join(__dirname, "/public");
+app.use(express.static(dir));
+
+app.use(cors(corsOptions));
+app.use(express.json());
+
+app.get("/", (_, res) => {
 	try {
-		const content = await fs.readFile(TOKEN_PATH);
-		const credentials = JSON.parse(content);
-		return google.auth.fromJSON(credentials);
-	} catch (err) {
-		return null;
+		res.status(200).json(RESPONSE.success(200, { message: "Server is up and running" }));
+	} catch (e) {
+		LOG.info("ROOT CATCH", e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
-}
+});
 
-/**
- * Serializes credentials to a file compatible with GoogleAuth.fromJSON.
- *
- * @param {OAuth2Client} client
- * @return {Promise<void>}
- */
-async function saveCredentials(client) {
-	const content = await fs.readFile(CREDENTIALS_PATH);
-	const keys = JSON.parse(content);
-	const key = keys.installed || keys.web;
-	const payload = JSON.stringify({
-		type: "authorized_user",
-		client_id: key.client_id,
-		client_secret: key.client_secret,
-		refresh_token: client.credentials.refresh_token,
-	});
-	await fs.writeFile(TOKEN_PATH, payload);
-}
+app.use("/auth", AuthRouter);
+app.use("/user", UserRouter);
+app.use("/subd", SubdRouter);
+app.use("/plan", PlanRouter);
+app.use("/token", TokenRouter);
+app.use("/receipt", ReceiptRouter);
 
-/**
- * Load or request or authorization to call APIs.
- *
- */
-async function authorize() {
-	let client = await loadSavedCredentialsIfExist();
-	if (client) {
-		return client;
-	}
-	client = await authenticate({
-		scopes: SCOPES,
-		keyfilePath: CREDENTIALS_PATH,
-	});
-	if (client.credentials) {
-		await saveCredentials(client);
-	}
-	return client;
-}
-
-/**
- * Lists the names and IDs of up to 10 files.
- * @param {OAuth2Client} authClient An authorized OAuth2 client.
- */
-async function listFiles(authClient) {
-	const drive = google.drive({ version: "v3", auth: authClient });
-	const res = await drive.files.list({
-		pageSize: 10,
-		fields: "nextPageToken, files(id, name)",
-	});
-	const files = res.data.files;
-	if (files.length === 0) {
-		console.log("No files found.");
-		return;
-	}
-
-	console.log("Files:");
-	files.map((file) => {
-		console.log(`${file.name} (${file.id})`);
-	});
-}
-
-authorize().then(listFiles).catch(console.error);
+app.listen(PORT, "0.0.0.0", (err) => {
+	if (err) throw err;
+	LOG.success(`SERVER STATUS: Listening on port ${PORT}`);
+});

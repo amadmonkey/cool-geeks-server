@@ -76,7 +76,7 @@ const login = async (req, res, activation) => {
 		}
 	} catch (e) {
 		console.error("LOGIN CATCH", e);
-		return res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+		return res.status(400).json(e);
 	}
 };
 

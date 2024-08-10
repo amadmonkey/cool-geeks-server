@@ -2,9 +2,8 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 export const CONSTANTS = {
-	// accessTokenAge: 60000 * 60,
-	// refreshTokenAge: 60000 * 60 * 6,
-	accessTokenAge: 10000,
+	// accessTokenAge: 10000,
+	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,
 	verifyEmailTokenAge: 60000 * 60,
 	passwordResetTokenAge: 60000 * 10,
