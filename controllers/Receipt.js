@@ -206,7 +206,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			const googleDriveService = new GoogleDriveService();
 			const folderId = "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ";
 			const gdriveId = await googleDriveService
-				.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+				.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
 				.catch((error) => {
 					throw error;
 				});
@@ -286,7 +286,7 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 
 		// create new file
 		const gdriveId = await googleDriveService
-			.saveFile(req.file.filename, req.file.destination, req.file.mimetype, folderId)
+			.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
 			.catch((error) => {
 				throw error;
 			});
