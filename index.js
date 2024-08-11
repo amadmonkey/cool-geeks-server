@@ -46,6 +46,7 @@ app.use("/plan", PlanRouter);
 app.use("/token", TokenRouter);
 app.use("/receipt", ReceiptRouter);
 
+export default app;
 app.listen(PORT, "0.0.0.0", (err) => {
 	if (err) throw err;
 	LOG.success(`SERVER STATUS: Listening on port ${PORT}`);
