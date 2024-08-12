@@ -1,7 +1,6 @@
 import fs from "fs";
 import { google } from "googleapis";
 import { GoogleAuth } from "google-auth-library";
-import { GOOGLE_APPLICATION_CREDENTIALS } from process.env;
 
 const SCOPES = [
 	"https://www.googleapis.com/auth/spreadsheets",
@@ -14,11 +13,12 @@ export class GoogleDriveService {
 	service;
 
 	constructor() {
+		const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 		this.service = google.drive({
 			version: "v3",
 			auth: new GoogleAuth({
 				scopes: SCOPES,
-				credentials: JSON.parse(GOOGLE_APPLICATION_CREDENTIALS),
+				credentials: credentials,
 			}),
 		});
 	}
