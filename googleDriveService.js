@@ -13,12 +13,11 @@ export class GoogleDriveService {
 	service;
 
 	constructor() {
-		const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 		this.service = google.drive({
 			version: "v3",
 			auth: new GoogleAuth({
 				scopes: SCOPES,
-				credentials: credentials,
+				credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
 			}),
 		});
 	}

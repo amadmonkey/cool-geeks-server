@@ -5,3 +5,4 @@ token.json
 service-keys.json
 credentials.json
 .vercel
+/public/uploads
