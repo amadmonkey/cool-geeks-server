@@ -17,7 +17,7 @@ export class GoogleDriveService {
 			version: "v3",
 			auth: new GoogleAuth({
 				scopes: SCOPES,
-				keyFile: "service-keys.json",
+				credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
 			}),
 		});
 	}
@@ -29,9 +29,6 @@ export class GoogleDriveService {
 	async searchFile(fileName, folderName) {
 		const files = [];
 		try {
-			// q: `mimeType='image/jpeg' ${fileName ? `name='${fileName}'` : ``} ${
-			// 	folderName ? `name='${folderName}'` : ``
-			// }`,
 			const res = await this.service.files.list({
 				q: `${mimeTypes} ${fileName ? `and name='${fileName}'` : ``}`,
 				fields: "nextPageToken, files(id, name)",
@@ -61,7 +58,7 @@ export class GoogleDriveService {
 			});
 			return file;
 		} catch (err) {
-			// TODO(developer) - Handle error
+			// TODO(developer) - Handle error <- ok bro
 			throw err;
 		}
 	}
@@ -71,9 +68,6 @@ export class GoogleDriveService {
 	 * @return{obj} folder Id
 	 * */
 	async createFolder(name) {
-		// Get credentials and build service
-		// TODO (developer) - Use appropriate auth mechanism for your app
-
 		const fileMetadata = {
 			name: name,
 			mimeType: "application/vnd.google-apps.folder",
@@ -109,7 +103,6 @@ export class GoogleDriveService {
 			fields: "id",
 			parents: [folder],
 		};
-
 		const media = {
 			mimeType: mimetype,
 			body: fs.createReadStream(path),
