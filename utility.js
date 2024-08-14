@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 
 export const CONSTANTS = {
 	// accessTokenAge: 10000,
+	GDRIVE_ID: {
+		QR: "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz",
+		RECEIPT: "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ",
+	},
 	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,
 	verifyEmailTokenAge: 60000 * 60,

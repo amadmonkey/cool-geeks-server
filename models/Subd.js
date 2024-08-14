@@ -8,14 +8,11 @@ const SubdSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		code: { type: String, required: true },
 		plans: {},
-		gcash: {
-			qr: {
-				filename: { type: String, required: true },
-				contentType: { type: String, required: true },
-			},
-			number: { type: String, required: true },
+		qr: {
+			filename: { type: String, required: true },
+			contentType: { type: String, required: true },
 		},
-
+		number: { type: String, required: true },
 		active: { type: Boolean, default: true, required: true },
 	},
 	{ timestamps: true }
