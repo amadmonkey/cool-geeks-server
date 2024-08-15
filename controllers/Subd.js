@@ -1,4 +1,5 @@
 import "dotenv/config.js";
+import fs from "fs";
 import multer from "multer";
 import Router from "express";
 import mongoose from "mongoose";
@@ -12,7 +13,14 @@ const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "public/uploads/qr");
+		// callback(null, "public/uploads/qr");
+		const directory = `./public/uploads/${req.query.userId}`;
+
+		if (!fs.existsSync(directory)) {
+			fs.mkdirSync(directory, { recursive: true });
+		}
+
+		cb(null, directory);
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
@@ -20,6 +28,8 @@ const storage = multer.diskStorage({
 		callback(null, file.originalname);
 	},
 });
+
+// const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
 
@@ -57,7 +67,7 @@ router.get("/image", async (req, res) => {
 	}
 });
 
-router.post("/create", upload.single("qr"), async (req, res) => {
+router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 	try {
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
@@ -69,6 +79,8 @@ router.post("/create", upload.single("qr"), async (req, res) => {
 			},
 			number: req.body.number,
 		};
+
+		console.log("req.file.path", req.file.path);
 
 		// gdrive upload file
 		const googleDriveService = new GoogleDriveService();
