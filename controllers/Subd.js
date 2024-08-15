@@ -15,10 +15,12 @@ const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
 		const directory = "public/uploads/qr";
 
+		console.log(3);
 		if (!fs.existsSync(directory)) {
 			fs.mkdirSync(directory, { recursive: true });
 		}
 
+		console.log(4);
 		callback(null, directory);
 	},
 	filename: function (req, file, callback) {
@@ -68,6 +70,7 @@ router.get("/image", async (req, res) => {
 
 router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
+		console.log(5);
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
 			name: req.body.name,
