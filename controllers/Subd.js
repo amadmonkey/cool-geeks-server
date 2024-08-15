@@ -66,7 +66,7 @@ router.get("/image", async (req, res) => {
 	}
 });
 
-router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
+router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
