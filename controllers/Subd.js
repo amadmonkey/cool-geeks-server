@@ -13,8 +13,7 @@ const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		// callback(null, "public/uploads/qr");
-		const directory = `./public/uploads/${req.query.userId}`;
+		const directory = "public/uploads/qr";
 
 		if (!fs.existsSync(directory)) {
 			fs.mkdirSync(directory, { recursive: true });
@@ -67,7 +66,7 @@ router.get("/image", async (req, res) => {
 	}
 });
 
-router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
+router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
