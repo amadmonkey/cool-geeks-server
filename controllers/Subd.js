@@ -13,12 +13,7 @@ const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		const directory = "/tmp";
-
-		console.log(3, fs.existsSync(directory));
-
-		console.log(4);
-		callback(null, directory);
+		callback(null, "/tmp");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
@@ -54,7 +49,6 @@ router.get("/image", async (req, res) => {
 		const { query } = req;
 		const googleDriveService = new GoogleDriveService();
 		const gdriveRes = await googleDriveService.downloadFile(query.id);
-		console.log(gdriveRes.data);
 
 		res.header("Content-Type", "image/jpeg");
 		res.header("Content-Length", gdriveRes.data.size);
@@ -67,7 +61,6 @@ router.get("/image", async (req, res) => {
 
 router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
-		console.log(5);
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
 			name: req.body.name,
@@ -78,8 +71,6 @@ router.post("/create", upload.single("qr"), async (req, res) => {
 			},
 			number: req.body.number,
 		};
-
-		console.log("req.file.path", req.file.path);
 
 		// gdrive upload file
 		const googleDriveService = new GoogleDriveService();
@@ -111,8 +102,6 @@ router.put("/update", isLoggedIn, async (req, res) => {
 			code: req.body.code.toUpperCase(),
 			number: req.body.number,
 		};
-
-		console.log(req.body);
 
 		const subdRes = await Subd.findOneAndUpdate({ _id: req.body._id }, form, {
 			new: true,

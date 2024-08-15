@@ -6,12 +6,10 @@ const { ACCESS_TOKEN_SECRET } = process.env;
 
 const isLoggedIn = async (req, res, next) => {
 	try {
-		console.log("1", req.headers);
 		if (req.headers.authorization) {
 			const token = req.headers.authorization.split(" ")[1];
 			if (token) {
 				const payload = jwt.verify(token, ACCESS_TOKEN_SECRET);
-				console.log("2", payload);
 				if (payload) {
 					req.user = payload;
 					next();
