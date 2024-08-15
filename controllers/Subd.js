@@ -15,10 +15,7 @@ const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
 		const directory = "public/uploads/qr";
 
-		console.log(3);
-		if (!fs.existsSync(directory)) {
-			fs.mkdirSync(directory, { recursive: true });
-		}
+		console.log(3, fs.existsSync(directory));
 
 		console.log(4);
 		callback(null, directory);
