@@ -13,7 +13,7 @@ const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		const directory = "./public/uploads/qr";
+		const directory = "/tmp";
 
 		console.log(3, fs.existsSync(directory));
 
