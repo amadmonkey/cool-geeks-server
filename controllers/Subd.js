@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
 			fs.mkdirSync(directory, { recursive: true });
 		}
 
-		cb(null, directory);
+		callback(null, directory);
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
