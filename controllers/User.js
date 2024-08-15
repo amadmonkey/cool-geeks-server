@@ -10,6 +10,8 @@ import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
 
 const router = Router();
 
+const { ORIGIN } = process.env;
+
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
@@ -97,7 +99,7 @@ router.post("/create", async (req, res) => {
 					name: `${createRes.firstName} ${createRes.lastName}`,
 					dirname: getFullUrl(req),
 					accountNumber: createRes.accountNumber,
-					link: `${process.env.ORIGIN}/login?u=${createRes.accountNumber}`,
+					link: `${ORIGIN}/login?u=${createRes.accountNumber}`,
 				},
 			})
 			.then(console.log)

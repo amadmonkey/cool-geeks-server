@@ -52,7 +52,7 @@ router.get("/image", async (req, res) => {
 		res.header("Content-Length", gdriveRes.data.size);
 		gdriveRes.data.stream().pipe(res);
 	} catch (e) {
-		console.error(e);
+		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
@@ -88,6 +88,7 @@ router.post("/create", isLoggedIn, upload.single("qr"), async (req, res) => {
 		await Plan.insertMany(plans);
 		res.status(200).json(RESPONSE.success(200, subdRes));
 	} catch (e) {
+		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });

@@ -2,12 +2,14 @@ import "dotenv/config.js";
 import jwt from "jsonwebtoken";
 import { RESPONSE, LOG } from "../utility.js";
 
+const { ACCESS_TOKEN_SECRET } = process.env;
+
 const isLoggedIn = async (req, res, next) => {
 	try {
 		if (req.headers.authorization) {
 			const token = req.headers.authorization.split(" ")[1];
 			if (token) {
-				const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+				const payload = jwt.verify(token, ACCESS_TOKEN_SECRET);
 				if (payload) {
 					req.user = payload;
 					next();

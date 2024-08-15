@@ -13,12 +13,12 @@ import ReceiptRouter from "./controllers/Receipt.js";
 
 import { LOG, RESPONSE } from "./utility.js";
 
-const { PORT } = process.env;
+const { PORT, ORIGIN } = process.env;
 
 const app = express();
 
 const corsOptions = {
-	origin: process.env.origin || 4000,
+	origin: ORIGIN || 4000,
 	credentials: true,
 };
 

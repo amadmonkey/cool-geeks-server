@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
+const { REFRESH_TOKEN_SECRET, ACCESS_TOKEN_SECRET } = process.env;
+
 export const CONSTANTS = {
 	// accessTokenAge: 10000,
 	GDRIVE_ID: {
@@ -89,7 +91,7 @@ export const TOKEN = {
 	refresh: async (req, res, Token) => {
 		try {
 			const refreshToken = req.body.token;
-			const { accountNumber } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+			const { accountNumber } = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
 			if (!refreshToken) {
 				tokenRemove(accountNumber, Token);
 				return res
@@ -105,7 +107,7 @@ export const TOKEN = {
 			// 		.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
 			// }
 
-			jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async (err, user) => {
+			jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, async (err, user) => {
 				if (err) res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
 
 				const userObj = {
@@ -114,7 +116,7 @@ export const TOKEN = {
 					generatedVia: "TOKEN_REFRESH",
 				};
 				const accessToken = TOKEN.create(userObj);
-				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
+				const refreshToken = jwt.sign(userObj, REFRESH_TOKEN_SECRET);
 
 				// delete token existing tokens
 				const tokenRemoveResponse = await tokenRemove(accountNumber, Token);
@@ -139,7 +141,7 @@ export const TOKEN = {
 		}
 	},
 	create: (tokenObj) => {
-		return jwt.sign(tokenObj, process.env.ACCESS_TOKEN_SECRET, {
+		return jwt.sign(tokenObj, ACCESS_TOKEN_SECRET, {
 			expiresIn: CONSTANTS.accessTokenAge,
 		});
 	},

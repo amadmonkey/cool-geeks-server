@@ -12,6 +12,8 @@ import { CONSTANTS, getFullUrl, LOG, RESPONSE, TOKEN } from "../utility.js";
 
 const router = Router();
 
+const { REFRESH_TOKEN_SECRET, EMAIL_VERIFY_SECRET, ORIGIN } = process.env;
+
 const getUser = async (emailAccountNo) =>
 	await User.findOne(
 		{ $or: [{ accountNumber: emailAccountNo }, { email: emailAccountNo }] },
@@ -62,7 +64,7 @@ const login = async (req, res, activation) => {
 				};
 				console.error("LOGIN userObj", userObj);
 				const accessToken = TOKEN.create(userObj);
-				const refreshToken = jwt.sign(userObj, process.env.REFRESH_TOKEN_SECRET);
+				const refreshToken = jwt.sign(userObj, REFRESH_TOKEN_SECRET);
 
 				user.password = undefined;
 
@@ -122,7 +124,7 @@ router.put("/verify-email", async (req, res) => {
 		}
 
 		// TODO: check if already has token. if has, return error need to wait for 5 minutes
-		const token = jwt.sign({ emailAccountNo: emailAccountNo }, process.env.EMAIL_VERIFY_SECRET, {
+		const token = jwt.sign({ emailAccountNo: emailAccountNo }, EMAIL_VERIFY_SECRET, {
 			expiresIn: CONSTANTS.verifyEmailTokenAge,
 		});
 
@@ -146,7 +148,7 @@ router.put("/verify-email", async (req, res) => {
 					name: `${user.firstName} ${user.lastName}`,
 					dirname: getFullUrl(req),
 					accountNumber: user.accountNumber,
-					link: `${process.env.ORIGIN}/verify?a=activate&u=${user.accountNumber}&t=${token}`,
+					link: `${ORIGIN}/verify?a=activate&u=${user.accountNumber}&t=${token}`,
 				},
 			})
 			.then(console.log)
@@ -172,7 +174,7 @@ router.put("/activate", async (req, res) => {
 			token: token,
 		});
 
-		jwt.verify(existingToken.token, process.env.EMAIL_VERIFY_SECRET, async (err, user) => {
+		jwt.verify(existingToken.token, EMAIL_VERIFY_SECRET, async (err, user) => {
 			if (err) {
 				console.log("activate jwt error", err);
 				return res.status(403).json(RESPONSE.fail(403, { message: "TOKEN_INVALID" }));
@@ -212,7 +214,7 @@ router.put("/reset-password", async (req, res) => {
 			token: token,
 		});
 
-		jwt.verify(token, process.env.EMAIL_VERIFY_SECRET, async (err, user) => {
+		jwt.verify(token, EMAIL_VERIFY_SECRET, async (err, user) => {
 			if (err) {
 				console.log("activate jwt error", err);
 				return res.status(403).json(RESPONSE.fail(403, { message: "TOKEN_INVALID" }));
@@ -249,7 +251,7 @@ router.put("/reset-password-request", async (req, res) => {
 
 		if (user) {
 			// generate token
-			const token = jwt.sign({ emailAccountNo: emailAccountNo }, process.env.EMAIL_VERIFY_SECRET, {
+			const token = jwt.sign({ emailAccountNo: emailAccountNo }, EMAIL_VERIFY_SECRET, {
 				expiresIn: CONSTANTS.passwordResetTokenAge,
 			});
 
@@ -272,7 +274,7 @@ router.put("/reset-password-request", async (req, res) => {
 						name: `${user.firstName} ${user.lastName}`,
 						dirname: getFullUrl(req),
 						accountNumber: user.accountNumber,
-						link: `${process.env.ORIGIN}/verify?a=reset&u=${user.accountNumber}&t=${token}`,
+						link: `${ORIGIN}/verify?a=reset&u=${user.accountNumber}&t=${token}`,
 					},
 				})
 				.then(console.log)
@@ -305,7 +307,7 @@ router.get("/email-test", async (req, res) => {
 				name: `Steve`,
 				dirname: getFullUrl(req),
 				accountNumber: accountNumber,
-				link: `${process.env.ORIGIN}/verify?a=reset&u=${accountNumber}&t=${token_here}`,
+				link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${token_here}`,
 			},
 		})
 		.then(console.log)
