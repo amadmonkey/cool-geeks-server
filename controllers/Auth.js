@@ -293,12 +293,11 @@ router.put("/reset-password-request", async (req, res) => {
 	}
 });
 
-router.get("/email-test", async (_, res) => {
+router.get("/email-test", async (req, res) => {
 	try {
 		const { query } = req;
-		console.log(res);
 		const accountNumber = query.u || "PES-2024-0007";
-		await email({ send: false, preview: true })
+		await email({ send: true, preview: false })
 			.send({
 				template: "account-created",
 				message: {
@@ -312,9 +311,11 @@ router.get("/email-test", async (_, res) => {
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
 				},
 			})
-			.then(console.log)
-			.catch(console.error);
-		res.status(200).json(RESPONSE.success(200, { message: "Email sent" }));
+			.then(() => res.status(200).json(RESPONSE.success(200, { message: "Email sent" })))
+			.catch((err) => {
+				console.log(err);
+				res.status(400).json(RESPONSE.fail(400, { message: err.message }));
+			});
 	} catch (e) {
 		LOG.error("/email-test", e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
