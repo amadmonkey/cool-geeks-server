@@ -295,8 +295,8 @@ router.put("/reset-password-request", async (req, res) => {
 
 router.get("/email-test", async (_, res) => {
 	try {
-		console.log(res);
 		const { query } = req;
+		console.log(res);
 		const accountNumber = query.u || "PES-2024-0007";
 		await email({ send: false, preview: true })
 			.send({
@@ -312,8 +312,8 @@ router.get("/email-test", async (_, res) => {
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
 				},
 			})
-			.then((res) => console.log(res))
-			.catch((err) => console.log(err));
+			.then(console.log)
+			.catch(console.error);
 		// res.status(200).json(RESPONSE.success(200, { message: "Email sent" }));
 	} catch (e) {
 		LOG.error("/email-test", e);
