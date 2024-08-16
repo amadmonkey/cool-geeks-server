@@ -8,6 +8,9 @@ import Receipt from "../models/Receipt.js";
 import { email, from } from "../mailing.js";
 import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
 
+import path from "path";
+import url from "url";
+
 const router = Router();
 
 const { ORIGIN } = process.env;
@@ -85,11 +88,15 @@ router.post("/create", async (req, res) => {
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
 
-		console.log("createRes", createRes);
-		console.log("getFullUrl", `${getFullUrl(req)}/emails`);
+		const root = path.join(__dirname, "emails");
+		const cwdtest = path.join(process.cwd(), "emails");
+
+		console.log("root", root);
+		console.log("getFullUrl", getFullUrl(req));
+		console.log("cwdtest", cwdtest);
 
 		// if dev preview = true, if prod preview = false
-		email({ send: true, preview: false, url: getFullUrl(req) })
+		email({ send: true, preview: false, url: root })
 			.send({
 				template: "account-created",
 				message: {
