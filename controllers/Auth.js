@@ -306,7 +306,7 @@ router.get("/email-test", async (_, res) => {
 					from: from,
 				},
 				locals: {
-					name: `Steve`,
+					name: `Steve from Minecraft`,
 					dirname: getFullUrl(req),
 					accountNumber: accountNumber,
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
@@ -314,10 +314,10 @@ router.get("/email-test", async (_, res) => {
 			})
 			.then(console.log)
 			.catch(console.error);
-		// res.status(200).json(RESPONSE.success(200, { message: "Email sent" }));
+		res.status(200).json(RESPONSE.success(200, { message: "Email sent" }));
 	} catch (e) {
 		LOG.error("/email-test", e);
-		// res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
