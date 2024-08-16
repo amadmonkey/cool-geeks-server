@@ -1,6 +1,5 @@
 import Email from "email-templates";
 
-import { LOG } from "./utility.js";
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
 
 export const from = {
@@ -8,12 +7,11 @@ export const from = {
 	address: EMAIL_ADDRESS,
 };
 
-//
-export const email = ({ send, preview, url }) => {
+export const email = ({ send, preview }) => {
 	try {
 		return new Email({
 			preview: preview,
-			views: { root: url },
+			views: { root: path.join(process.cwd(), "emails") },
 			send: send,
 			transport: {
 				host: "smtp.gmail.com",
@@ -26,6 +24,6 @@ export const email = ({ send, preview, url }) => {
 			},
 		});
 	} catch (error) {
-		LOG.error(error);
+		console.error(error);
 	}
 };
