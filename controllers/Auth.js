@@ -297,7 +297,7 @@ router.get("/email-test", async (req, res) => {
 	try {
 		const { query } = req;
 		const accountNumber = query.u || "PES-2024-0007";
-		await email({ send: true, preview: false, url: getFullUrl(req) })
+		await email({ send: false, preview: true, url: getFullUrl(req) })
 			.send({
 				template: "account-created",
 				message: {

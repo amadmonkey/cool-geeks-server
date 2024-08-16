@@ -1,4 +1,5 @@
 import Email from "email-templates";
+import path from "path";
 
 import { getFullUrl, LOG } from "./utility.js";
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
@@ -10,14 +11,13 @@ export const from = {
 
 export const email = ({ send, preview, url }) => {
 	try {
-		console.log(url, url);
+		console.log("url", `${url}/emails`);
+		console.log("url", path.join(url, "emails"));
 		return new Email({
 			preview: preview,
 			send: send,
 			views: { root: `${url}/emails` },
 			transport: {
-				// uncomment below for testing
-				// jsonTransport: true,
 				host: "smtp.gmail.com",
 				port: 465,
 				secure: true,
