@@ -84,9 +84,9 @@ router.post("/create", async (req, res) => {
 			...{ _id: new mongoose.Types.ObjectId() },
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
-		console.log("createRes", createRes);
 
-		console.log("getFullUrl", getFullUrl(req));
+		console.log("createRes", createRes);
+		console.log("getFullUrl", `${getFullUrl(req)}/emails`);
 
 		// if dev preview = true, if prod preview = false
 		email({ send: true, preview: false, url: getFullUrl(req) })

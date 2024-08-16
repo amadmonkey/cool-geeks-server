@@ -14,7 +14,7 @@ export const email = ({ send, preview, url }) => {
 		return new Email({
 			preview: preview,
 			send: send,
-			views: { root: `${url}` },
+			views: { root: `${url}/emails` },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,
