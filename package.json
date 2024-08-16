@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm install",
-    "start": "node index.js",
+    "start": "NODE_DEBUG=email-templates node index.js",
     "dev": "nodemon index.js"
   },
   "keywords": [],
