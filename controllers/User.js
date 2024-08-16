@@ -85,7 +85,6 @@ router.post("/create", async (req, res) => {
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
 		console.log("createRes", createRes);
-		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 
 		console.log("getFullUrl", getFullUrl(req));
 
@@ -106,6 +105,8 @@ router.post("/create", async (req, res) => {
 			})
 			.then(console.log)
 			.catch(console.error);
+
+		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 	} catch (e) {
 		let message = "";
 		switch (e.code) {
