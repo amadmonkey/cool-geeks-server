@@ -1,4 +1,5 @@
 import Email from "email-templates";
+import path from "path";
 
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
 
