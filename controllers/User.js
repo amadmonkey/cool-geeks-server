@@ -84,7 +84,7 @@ router.post("/create", async (req, res) => {
 			...{ _id: new mongoose.Types.ObjectId() },
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
-
+		console.log("createRes", createRes);
 		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 
 		console.log("getFullUrl", getFullUrl(req));

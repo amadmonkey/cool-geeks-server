@@ -1,6 +1,4 @@
 import Email from "email-templates";
-import url from "url";
-import path from "path";
 
 import { LOG } from "./utility.js";
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
@@ -12,15 +10,10 @@ export const from = {
 
 export const email = ({ send, preview }) => {
 	try {
-		const __filename = url.fileURLToPath(import.meta.url);
-		const __dirname = path.dirname(__filename);
-
-		console.log("__dirname", __dirname);
-
 		return new Email({
 			preview: preview,
 			send: send,
-			views: { root: `${__dirname}/emails` },
+			views: { root: `${getFullUrl(req)}/emails` },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,
