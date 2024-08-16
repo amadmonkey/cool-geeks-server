@@ -91,8 +91,7 @@ router.post("/create", async (req, res) => {
 		// if dev preview = true, if prod preview = false
 		email({ send: true, preview: false, url: getFullUrl(req) })
 			.send({
-				// template: "account-created",
-				template: `${getFullUrl(req)}/emails/account-created`,
+				template: "account-created",
 				message: {
 					to: createRes.email,
 					from: from,
