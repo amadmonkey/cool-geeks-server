@@ -12,15 +12,9 @@ export const from = {
 
 export const email = ({ send, preview }) => {
 	try {
-		const __filename = url.fileURLToPath(import.meta.url);
-		const __dirname = path.dirname(__filename);
-
-		console.log("__dirname", __dirname);
-
 		return new Email({
 			preview: preview,
 			send: send,
-			views: { root: __dirname + "/emails" },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,
