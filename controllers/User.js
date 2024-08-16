@@ -88,6 +88,16 @@ router.post("/create", async (req, res) => {
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
 
+		// const __filename = url.fileURLToPath(import.meta.url);
+		// const __dirname = path.dirname(__filename);
+		// const root = path.join(__dirname, "emails");
+		// const cwdtest = path.join(process.cwd(), "emails");
+
+		// console.log("root", root);
+		// console.log("getFullUrl", getFullUrl(req));
+		// console.log("cwdtest", cwdtest);
+
+		// if dev preview = true, if prod preview = false
 		email({ send: true, preview: false })
 			.send({
 				template: "account-created",
@@ -102,8 +112,8 @@ router.post("/create", async (req, res) => {
 					link: `${ORIGIN}/login?u=${createRes.accountNumber}`,
 				},
 			})
-			.then(console.log)
-			.catch(console.error);
+			.then((res) => console.log(res))
+			.catch((err) => console.error(err));
 
 		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 	} catch (e) {

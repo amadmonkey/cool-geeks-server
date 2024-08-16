@@ -1,5 +1,4 @@
 import "dotenv/config.js";
-import fs from "fs";
 import multer from "multer";
 import Router from "express";
 import mongoose from "mongoose";
@@ -16,13 +15,9 @@ const storage = multer.diskStorage({
 		callback(null, "/tmp");
 	},
 	filename: function (req, file, callback) {
-		const extArray = file.mimetype.split("/");
-		const ext = extArray[extArray.length - 1];
 		callback(null, file.originalname);
 	},
 });
-
-// const storage = multer.memoryStorage();
 
 const upload = multer({ storage: storage });
 

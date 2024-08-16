@@ -17,8 +17,7 @@ const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "public/uploads/receipts");
-		// callback(null, "https://www.googleapis.com/upload/drive/v3/files?uploadType=media");
+		callback(null, "/tmp");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
