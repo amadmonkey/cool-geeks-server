@@ -12,6 +12,7 @@ export const email = ({ send, preview }) => {
 		return new Email({
 			preview: preview,
 			send: send,
+			views: { root },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,

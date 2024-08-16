@@ -87,6 +87,8 @@ router.post("/create", async (req, res) => {
 
 		res.status(200).json(RESPONSE.success(200, { general: "User created" }));
 
+		console.log("getFullUrl", getFullUrl(req));
+
 		// if dev preview = true, if prod preview = false
 		email({ send: true, preview: false })
 			.send({

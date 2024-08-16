@@ -81,7 +81,7 @@ const login = async (req, res, activation) => {
 		}
 	} catch (e) {
 		console.error("LOGIN CATCH", e);
-		return res.status(400).json(e);
+		return res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 };
 
@@ -96,7 +96,7 @@ router.delete("/logout", async (req, res) => {
 		LOG.success("LOGOUT", "Logout successful");
 		res.status(200).json(RESPONSE.success(200, { general: "Logout successful" }));
 	} catch (e) {
-		res.status(400).json(RESPONSE.fail(400, e));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -200,7 +200,7 @@ router.put("/activate", async (req, res) => {
 		});
 	} catch (e) {
 		console.error(e);
-		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -236,7 +236,7 @@ router.put("/reset-password", async (req, res) => {
 			}
 		});
 	} catch (e) {
-		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
@@ -289,29 +289,35 @@ router.put("/reset-password-request", async (req, res) => {
 		}
 	} catch (e) {
 		LOG.error("/reset-password-request", e);
-		res.status(400).json(RESPONSE.fail(400, { e: e.message }));
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
 router.get("/email-test", async (req, res) => {
-	const { query } = req;
-	const accountNumber = query.u || "PES-2024-0007";
-	email({ send: false, preview: true })
-		.send({
-			template: "account-created",
-			message: {
-				to: "aquinoarcie@gmail.com",
-				from: from,
-			},
-			locals: {
-				name: `Steve`,
-				dirname: getFullUrl(req),
-				accountNumber: accountNumber,
-				link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${token_here}`,
-			},
-		})
-		.then(console.log)
-		.catch(console.error);
+	try {
+		const { query } = req;
+		const accountNumber = query.u || "PES-2024-0007";
+		await email({ send: false, preview: true })
+			.send({
+				template: "account-created",
+				message: {
+					to: "aquinoarcie@gmail.com",
+					from: from,
+				},
+				locals: {
+					name: `Steve`,
+					dirname: getFullUrl(req),
+					accountNumber: accountNumber,
+					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
+				},
+			})
+			.then(console.log)
+			.catch(console.error);
+		res.status(200).json(RESPONSE.success(200, { message: "Email sent" }));
+	} catch (e) {
+		LOG.error("/email-test", e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
 });
 
 export default router;
