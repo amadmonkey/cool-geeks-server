@@ -306,7 +306,7 @@ router.get("/email-test", async (req, res) => {
 				},
 				locals: {
 					name: `Steve from Minecraft`,
-					dirname: getFullUrl(req),
+					dirname: window.location.href,
 					accountNumber: accountNumber,
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
 				},

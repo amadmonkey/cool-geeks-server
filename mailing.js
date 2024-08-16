@@ -1,6 +1,6 @@
 import Email from "email-templates";
 
-import { getFullUrl, LOG } from "./utility.js";
+import { LOG } from "./utility.js";
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
 
 export const from = {
@@ -13,7 +13,7 @@ export const email = ({ send, preview }) => {
 		return new Email({
 			preview: preview,
 			send: send,
-			views: { root: `${getFullUrl(req)}/emails` },
+			views: { root: `${window.location.href}/emails` },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,
