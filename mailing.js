@@ -11,7 +11,7 @@ export const from = {
 	address: EMAIL_ADDRESS,
 };
 
-export const email = ({ send, preview, url }) => {
+export const email = ({ send, preview }) => {
 	try {
 		const __filename = url.fileURLToPath(import.meta.url);
 		const __dirname = path.dirname(__filename);
