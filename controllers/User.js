@@ -88,6 +88,8 @@ router.post("/create", async (req, res) => {
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
 		});
 
+		const __filename = url.fileURLToPath(import.meta.url);
+		const __dirname = path.dirname(__filename);
 		const root = path.join(__dirname, "emails");
 		const cwdtest = path.join(process.cwd(), "emails");
 
@@ -96,7 +98,7 @@ router.post("/create", async (req, res) => {
 		console.log("cwdtest", cwdtest);
 
 		// if dev preview = true, if prod preview = false
-		email({ send: true, preview: false, url: root })
+		email({ send: true, preview: false, url: cwdtest })
 			.send({
 				template: "account-created",
 				message: {
