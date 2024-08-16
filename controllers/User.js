@@ -87,10 +87,9 @@ router.post("/create", async (req, res) => {
 		console.log("createRes", createRes);
 
 		console.log("getFullUrl", getFullUrl(req));
-		console.log("window.location.href", window.location.href);
 
 		// if dev preview = true, if prod preview = false
-		email({ send: true, preview: false })
+		email({ send: true, preview: false, url: getFullUrl(req) })
 			.send({
 				template: "account-created",
 				message: {
@@ -99,7 +98,7 @@ router.post("/create", async (req, res) => {
 				},
 				locals: {
 					name: `${createRes.firstName} ${createRes.lastName}`,
-					dirname: window.location.href,
+					dirname: getFullUrl(req),
 					accountNumber: createRes.accountNumber,
 					link: `${ORIGIN}/login?u=${createRes.accountNumber}`,
 				},

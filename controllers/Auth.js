@@ -297,7 +297,7 @@ router.get("/email-test", async (req, res) => {
 	try {
 		const { query } = req;
 		const accountNumber = query.u || "PES-2024-0007";
-		await email({ send: true, preview: false })
+		await email({ send: true, preview: false, url: getFullUrl(req) })
 			.send({
 				template: "account-created",
 				message: {
@@ -306,7 +306,7 @@ router.get("/email-test", async (req, res) => {
 				},
 				locals: {
 					name: `Steve from Minecraft`,
-					dirname: window.location.href,
+					dirname: getFullUrl(req),
 					accountNumber: accountNumber,
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
 				},
