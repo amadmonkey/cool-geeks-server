@@ -10,10 +10,11 @@ export const from = {
 
 export const email = ({ send, preview, url }) => {
 	try {
+		console.log(url, url);
 		return new Email({
 			preview: preview,
 			send: send,
-			views: { root: `${url}/emails` },
+			views: { root: `${url}` },
 			transport: {
 				// uncomment below for testing
 				// jsonTransport: true,
