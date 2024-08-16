@@ -99,7 +99,7 @@ router.post("/create", async (req, res) => {
 				},
 				locals: {
 					name: `${createRes.firstName} ${createRes.lastName}`,
-					dirname: `${getFullUrl(req)}/emails`,
+					dirname: getFullUrl(req),
 					accountNumber: createRes.accountNumber,
 					link: `${ORIGIN}/login?u=${createRes.accountNumber}`,
 				},
