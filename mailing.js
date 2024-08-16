@@ -1,6 +1,6 @@
 import Email from "email-templates";
 
-import { LOG } from "./utility.js";
+import { getFullUrl, LOG } from "./utility.js";
 const { EMAIL_ADDRESS, EMAIL_PASSWORD } = process.env;
 
 export const from = {
