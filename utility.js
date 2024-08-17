@@ -5,9 +5,9 @@ const { REFRESH_TOKEN_SECRET, ACCESS_TOKEN_SECRET } = process.env;
 
 export const CONSTANTS = {
 	// accessTokenAge: 10000,
-	GDRIVE_ID: {
-		QR: "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz",
-		RECEIPT: "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ",
+	FOLDER_ID: {
+		QR: "qr",
+		RECEIPT: "receipt",
 	},
 	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,

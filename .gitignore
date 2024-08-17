@@ -10,4 +10,4 @@ service-keys.json
 
 # folders
 /node_modules
-/public/uploads
+/tmp

@@ -4,7 +4,7 @@ import { SchemaTypes } from "mongoose";
 const SubdSchema = new mongoose.Schema(
 	{
 		_id: { type: SchemaTypes.ObjectId, required: true },
-		gdriveId: { type: String },
+		imageId: { type: String },
 		name: { type: String, required: true },
 		code: { type: String, required: true },
 		plans: {},

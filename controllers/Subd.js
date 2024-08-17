@@ -6,13 +6,15 @@ import isLoggedIn from "./middleware.js";
 import Subd from "../models/Subd.js";
 import Plan from "../models/Plan.js";
 import { CONSTANTS, LOG, RESPONSE } from "../utility.js";
+
 import { GoogleDriveService } from "../googleDriveService.js";
+import { CloudinaryService } from "../cloudinary.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "/tmp");
+		callback(null, "tmp");
 	},
 	filename: function (req, file, callback) {
 		callback(null, file.originalname);
@@ -21,6 +23,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// GET info
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
@@ -39,21 +42,30 @@ router.get("/", isLoggedIn, async (req, res) => {
 	}
 });
 
-router.get("/image", async (req, res) => {
+// GET image
+router.get("/image", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
-		const googleDriveService = new GoogleDriveService();
-		const gdriveRes = await googleDriveService.downloadFile(query.id);
+		// GDRIVE GET
+		// const googleDriveService = new GoogleDriveService();
+		// const gdriveRes = await googleDriveService.downloadFile(query.id);
+		// res.header("Content-Type", "image/jpeg");
+		// res.header("Content-Length", gdriveRes.data.size);
+		// gdriveRes.data.stream().pipe(res);
 
-		res.header("Content-Type", "image/jpeg");
-		res.header("Content-Length", gdriveRes.data.size);
-		gdriveRes.data.stream().pipe(res);
+		// CLOUDINARY GET
+		console.log(query.id);
+		const cloudinaryService = new CloudinaryService();
+		const cloudinaryRes = await cloudinaryService.url(query.id);
+		console.log("cloudinaryRes", cloudinaryRes);
+		res.status(200).json(RESPONSE.success(200, cloudinaryRes));
 	} catch (e) {
 		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
+// CREATE info + image
 router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
 		const form = {
@@ -67,16 +79,25 @@ router.post("/create", upload.single("qr"), async (req, res) => {
 			number: req.body.number,
 		};
 
-		// gdrive upload file
-		const googleDriveService = new GoogleDriveService();
-		const folderId = "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz";
-		const gdriveId = await googleDriveService
-			.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
-			.catch((error) => {
-				throw error;
-			});
+		// GDRIVE UPLOAD
+		// const googleDriveService = new GoogleDriveService();
+		// const folderId = "1wjdmqX84ZIfoEIS4e_UUdKqi-vIpFhmz";
+		// const imageId = await googleDriveService
+		// 	.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
+		// 	.catch((error) => {
+		// 		throw error;
+		// 	});
 
-		const SaveSubd = new Subd({ ...form, ...{ gdriveId: gdriveId } });
+		// CLOUDINARY UPLOAD
+		const cloudinaryService = new CloudinaryService();
+		const cloudinaryRes = await cloudinaryService.upload(
+			req.file.filename,
+			req.file.path,
+			CONSTANTS.FOLDER_ID.QR
+		);
+		console.log("cloudinaryRes", cloudinaryRes);
+
+		const SaveSubd = new Subd({ ...form, ...{ imageId: cloudinaryRes.public_id } });
 		const subdRes = await SaveSubd.save();
 		const plans = JSON.parse(req.body.plans).map((plan) => ({
 			...plan,
@@ -90,6 +111,7 @@ router.post("/create", upload.single("qr"), async (req, res) => {
 	}
 });
 
+// UPDATE info
 router.put("/update", isLoggedIn, async (req, res) => {
 	try {
 		const form = {
@@ -111,6 +133,7 @@ router.put("/update", isLoggedIn, async (req, res) => {
 	}
 });
 
+// UPDATE image
 router.patch("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 	try {
 		const { file, body } = req;
@@ -121,35 +144,48 @@ router.patch("/update", isLoggedIn, upload.single("qr"), async (req, res) => {
 			},
 		};
 
-		const googleDriveService = new GoogleDriveService();
+		// const googleDriveService = new GoogleDriveService();
+		const cloudinaryService = new CloudinaryService();
 
 		// delete old file
-		if (form.gdriveId) {
-			const gdriveDeleteRes = await googleDriveService.deleteFile(body.gdriveId);
-			LOG.info("gdriveDeleteRes", gdriveDeleteRes);
+		if (body.imageId) {
+			// GDRIVE DELETE
+			// const gdriveDeleteRes = await googleDriveService.deleteFile(body.imageId);
+			// LOG.info("gdriveDeleteRes", gdriveDeleteRes);
+
+			// CLOUDINARY DELETE
+			const deleteRes = await cloudinaryService.destroy(body.imageId);
+			LOG.info("deleteRes", deleteRes);
 		}
 
-		// create new file
-		const newGdriveId = await googleDriveService
-			.saveFile(file.filename, file.path, file.mimetype, CONSTANTS.GDRIVE_ID.QR)
-			.catch((error) => {
-				throw error;
-			});
-
-		const subdRes = await Subd.findOneAndUpdate(
-			{ _id: body._id },
-			{ ...form, ...{ gdriveId: newGdriveId } },
-			{ new: true }
-		).lean();
-		const plansRes = await Plan.find({ subdRef: subdRes._id }).catch((error) =>
-			res.status(400).json(RESPONSE.fail(400, { error }))
+		// GDRIVE UPLOAD
+		// const newImageId = await googleDriveService
+		// 	.saveFile(file.filename, file.path, file.mimetype, CONSTANTS.GDRIVE_ID.QR)
+		// 	.catch((error) => {
+		// 		throw error;
+		// 	});
+		// CLOUDINARY UPLOAD
+		const cloudinaryRes = await cloudinaryService.upload(
+			req.file.filename,
+			req.file.path,
+			CONSTANTS.FOLDER_ID.QR
 		);
-		return res.json(RESPONSE.success(200, { ...subdRes, ...{ plans: plansRes } }));
+		console.log("cloudinaryRes", cloudinaryRes);
+
+		await Subd.findOneAndUpdate(
+			{ _id: body._id },
+			{ ...form, imageId: cloudinaryRes.public_id },
+			{ new: true }
+		);
+
+		const newImageUrl = cloudinaryService.url(cloudinaryRes.public_id);
+		return res.json(RESPONSE.success(200, newImageUrl));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
 
+// DELETE info + image
 router.delete("/delete", isLoggedIn, async (req, res) => {
 	try {
 		const subdRes = await Subd.findOneAndUpdate(

@@ -9,15 +9,16 @@ import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
 import Plan from "../models/Plan.js";
 import ReceiptReason from "../models/ReceiptReason.js";
-
 import { CONSTANTS, LOG, RESPONSE, SEARCH_TYPE, toRegex } from "../utility.js";
+
 import { GoogleDriveService } from "../googleDriveService.js";
+import { CloudinaryService } from "../cloudinary.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "/tmp");
+		callback(null, "tmp");
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");
@@ -28,27 +29,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.get("/test", async (req, res) => {
-	const googleDriveService = new GoogleDriveService();
-	console.log(await googleDriveService.createFolder("qr"));
-});
-
-router.get("/image", async (req, res) => {
-	try {
-		const { query } = req;
-		const googleDriveService = new GoogleDriveService();
-		const gdriveRes = await googleDriveService.downloadFile(query.id);
-		console.log(gdriveRes.data);
-
-		res.header("Content-Type", "image/jpeg");
-		res.header("Content-Length", gdriveRes.data.size);
-		gdriveRes.data.stream().pipe(res);
-	} catch (e) {
-		console.error(e);
-		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
-	}
-});
-
+// GET info
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		const { query: filters } = req;
@@ -171,6 +152,30 @@ router.get("/", isLoggedIn, async (req, res) => {
 	}
 });
 
+// GET image
+router.get("/image", async (req, res) => {
+	try {
+		const { query } = req;
+		// GDRIVE GET
+		// const googleDriveService = new GoogleDriveService();
+		// const gdriveRes = await googleDriveService.downloadFile(query.id);
+		// console.log(gdriveRes.data);
+		// res.header("Content-Type", "image/jpeg");
+		// res.header("Content-Length", gdriveRes.data.size);
+		// gdriveRes.data.stream().pipe(res);
+
+		// CLOUDINARY GET
+		const cloudinaryService = new CloudinaryService();
+		const cloudinaryRes = await cloudinaryService.url(query.id);
+		console.log("cloudinaryRes", cloudinaryRes);
+		res.status(200).json(RESPONSE.success(200, cloudinaryRes));
+	} catch (e) {
+		console.error(e);
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+// GET reason
 router.get("/reason", isLoggedIn, async (req, res) => {
 	try {
 		const { query } = req;
@@ -188,6 +193,7 @@ router.get("/reason", isLoggedIn, async (req, res) => {
 	}
 });
 
+// CREATE info + image
 router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) => {
 	try {
 		const user = await User.findOne(
@@ -201,18 +207,26 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 				? DateTime.fromJSDate(latestReceipt.receiptDate).plus({ month: 1 })
 				: DateTime.now().toJSDate(); //"2024-04-11"
 
-			// gdrive upload file
-			const googleDriveService = new GoogleDriveService();
-			const folderId = "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ";
-			const gdriveId = await googleDriveService
-				.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
-				.catch((error) => {
-					throw error;
-				});
+			// GDRIVE UPLOAD
+			// const googleDriveService = new GoogleDriveService();
+			// const imageId = await googleDriveService
+			// .saveFile(req.file.filename, req.file.path, req.file.mimetype, CONSTANTS.GDRIVE_ID.RECEIPT)
+			// 	.catch((error) => {
+			// 		throw error;
+			// 	});
+
+			// CLOUDINARY UPLOAD
+			const cloudinaryService = new CloudinaryService();
+			const cloudinaryRes = await cloudinaryService.upload(
+				req.file.filename,
+				req.file.path,
+				CONSTANTS.FOLDER_ID.RECEIPT
+			);
+			console.log("cloudinaryRes", cloudinaryRes);
 
 			const formData = {
 				_id: new mongoose.Types.ObjectId(),
-				gdriveId: gdriveId,
+				imageId: cloudinaryRes.public_id,
 				userRef: user._id,
 				planRef: user.planRef,
 				referenceType: JSON.parse(req.body.referenceType),
@@ -233,7 +247,7 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 	}
 });
 
-// update db fields
+// UPDATE info
 router.put("/update", isLoggedIn, async (req, res) => {
 	try {
 		const form = req.body;
@@ -265,7 +279,7 @@ router.put("/update", isLoggedIn, async (req, res) => {
 	}
 });
 
-// update receipt image
+// UPDATE image
 router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) => {
 	try {
 		const form = req.body;
@@ -276,27 +290,41 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			status: CONSTANTS.RECEIPT_STATUS.pending,
 		};
 
-		const googleDriveService = new GoogleDriveService();
-		const folderId = "12THjHe9r195AnhV_wCGxozGMT0gmxnJZ";
+		// const googleDriveService = new GoogleDriveService();
+		const cloudinaryService = new CloudinaryService();
 
 		// delete old file
-		const gdriveDeleteRes = await googleDriveService.deleteFile(form.gdriveId);
-		console.log("gdriveDeleteRes", gdriveDeleteRes);
+		if (form.imageId) {
+			// GDRIVE DELETE
+			// const gdriveDeleteRes = await googleDriveService.deleteFile(form.imageId);
+			// console.log("gdriveDeleteRes", gdriveDeleteRes);
 
-		// create new file
-		const gdriveId = await googleDriveService
-			.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
-			.catch((error) => {
-				throw error;
-			});
+			// CLOUDINARY DELETE
+			const deleteRes = await cloudinaryService.destroy(form.imageId);
+			LOG.info("deleteRes", deleteRes);
+		}
+
+		// GDRIVE UPLOAD
+		// const imageId = await googleDriveService
+		// 	.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
+		// 	.catch((error) => {
+		// 		throw error;
+		// 	});
+
+		// CLOUDINARY UPLOAD
+		const cloudinaryRes = await cloudinaryService.upload(
+			req.file.filename,
+			req.file.path,
+			CONSTANTS.FOLDER_ID.RECEIPT
+		);
+		console.log("cloudinaryRes", cloudinaryRes);
 
 		const receiptRes = await Receipt.findOneAndUpdate(
 			{ _id: form._id },
-			{ ...formData, ...{ gdriveId: gdriveId } },
-			{
-				new: true,
-			}
-		).lean();
+			{ ...formData, ...{ imageId: cloudinaryRes.public_id } },
+			{ new: true }
+		);
+
 		res.json(RESPONSE.success(200, receiptRes));
 	} catch (e) {
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
