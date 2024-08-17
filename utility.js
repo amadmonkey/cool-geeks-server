@@ -9,7 +9,7 @@ export const CONSTANTS = {
 		PROD: "PRODUCTION",
 		DEV: "DEVELOPMENT",
 	},
-	TMP: `${process.env.ENV === "DEVELOPMENT" ? "/" : ""}tmp`,
+	TMP: `${process.env.ENV === "DEVELOPMENT" ? "" : "/"}tmp`,
 	FOLDER_ID: {
 		QR: "qr",
 		RECEIPT: "receipt",
