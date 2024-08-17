@@ -5,6 +5,11 @@ const { REFRESH_TOKEN_SECRET, ACCESS_TOKEN_SECRET } = process.env;
 
 export const CONSTANTS = {
 	// accessTokenAge: 10000,
+	ENV: {
+		PROD: "PRODUCTION",
+		DEV: "DEVELOPMENT",
+	},
+	TMP: `${process.env.ENV === "DEVELOPMENT" ? "/" : ""}tmp`,
 	FOLDER_ID: {
 		QR: "qr",
 		RECEIPT: "receipt",

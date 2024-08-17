@@ -11,14 +11,14 @@ import Plan from "../models/Plan.js";
 import ReceiptReason from "../models/ReceiptReason.js";
 import { CONSTANTS, LOG, RESPONSE, SEARCH_TYPE, toRegex } from "../utility.js";
 
-import { GoogleDriveService } from "../googleDriveService.js";
+// import { GoogleDriveService } from "../googleDriveService.js";
 import { CloudinaryService } from "../cloudinary.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "tmp");
+		callback(null, CONSTANTS.TMP);
 	},
 	filename: function (req, file, callback) {
 		const extArray = file.mimetype.split("/");

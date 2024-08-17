@@ -7,14 +7,14 @@ import Subd from "../models/Subd.js";
 import Plan from "../models/Plan.js";
 import { CONSTANTS, LOG, RESPONSE } from "../utility.js";
 
-import { GoogleDriveService } from "../googleDriveService.js";
+// import { GoogleDriveService } from "../googleDriveService.js";
 import { CloudinaryService } from "../cloudinary.js";
 
 const router = Router();
 
 const storage = multer.diskStorage({
 	destination: function (req, file, callback) {
-		callback(null, "tmp");
+		callback(null, CONSTANTS.TMP);
 	},
 	filename: function (req, file, callback) {
 		callback(null, file.originalname);
