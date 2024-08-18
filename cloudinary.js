@@ -39,10 +39,12 @@ export class CloudinaryService {
 			});
 	}
 
+	// HERE: generate new filename here
 	async upload(filename, path, folder) {
+		const filenameArray = filename.split(".");
 		return await this.cloudinary.uploader
 			.upload(path, {
-				public_id: filename.split(".").pop()[0],
+				public_id: filenameArray.slice(0, filenameArray.length - 1).join("."),
 				folder: folder,
 			})
 			.then((res) => {

@@ -12,7 +12,7 @@ export const CONSTANTS = {
 	TMP: `${process.env.ENV === "DEVELOPMENT" ? "" : "/"}tmp`,
 	FOLDER_ID: {
 		QR: "qr",
-		RECEIPT: "receipt",
+		RECEIPT: "receipts",
 	},
 	accessTokenAge: 60000 * 60,
 	refreshTokenAge: 60000 * 60 * 6,

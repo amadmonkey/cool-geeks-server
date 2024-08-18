@@ -174,6 +174,9 @@ router.put("/activate", async (req, res) => {
 			token: token,
 		});
 
+		// TODO: add checking for user's status for resent emails
+		// e.g: if verify = continue, else = return already activated,
+
 		jwt.verify(existingToken.token, EMAIL_VERIFY_SECRET, async (err, user) => {
 			if (err) {
 				console.log("activate jwt error", err);

@@ -68,12 +68,15 @@ router.get("/image", isLoggedIn, async (req, res) => {
 // CREATE info + image
 router.post("/create", upload.single("qr"), async (req, res) => {
 	try {
+		const filename = `${req.body.code.toUpperCase()}.${Date.now()}.${req.file.mimetype
+			.split("/")
+			.pop()}`;
 		const form = {
 			_id: new mongoose.Types.ObjectId(),
 			name: req.body.name,
 			code: req.body.code.toUpperCase(),
 			qr: {
-				filename: req.file.filename,
+				filename: filename,
 				contentType: req.file.mimetype,
 			},
 			number: req.body.number,
@@ -91,7 +94,7 @@ router.post("/create", upload.single("qr"), async (req, res) => {
 		// CLOUDINARY UPLOAD
 		const cloudinaryService = new CloudinaryService();
 		const cloudinaryRes = await cloudinaryService.upload(
-			req.file.filename,
+			filename,
 			req.file.path,
 			CONSTANTS.FOLDER_ID.QR
 		);
