@@ -4,20 +4,15 @@ import mongoose from "mongoose";
 const { REFRESH_TOKEN_SECRET, ACCESS_TOKEN_SECRET } = process.env;
 
 export const CONSTANTS = {
-	// accessTokenAge: 10000,
+	TMP: `${process.env.ENV === "DEVELOPMENT" ? "" : "/"}tmp`,
 	ENV: {
 		PROD: "PRODUCTION",
 		DEV: "DEVELOPMENT",
 	},
-	TMP: `${process.env.ENV === "DEVELOPMENT" ? "" : "/"}tmp`,
 	FOLDER_ID: {
 		QR: "qr",
 		RECEIPT: "receipts",
 	},
-	accessTokenAge: 60000 * 60,
-	refreshTokenAge: 60000 * 60 * 6,
-	verifyEmailTokenAge: 60000 * 60,
-	passwordResetTokenAge: 60000 * 10,
 	RECEIPT_STATUS: {
 		pending: "PENDING",
 		accepted: "ACCEPTED",
@@ -34,19 +29,35 @@ export const CONSTANTS = {
 		mid: "MID",
 		end: "END",
 	},
-};
-
-export const SEARCH_TYPE = {
-	RECEIPT: {
-		REFNO: "REFNO",
-		USER: "USER",
-		PLAN: "PLAN",
+	SEARCH_TYPE: {
+		RECEIPT: {
+			REFNO: "REFNO",
+			USER: "USER",
+			PLAN: "PLAN",
+		},
+	},
+	MESSAGE: {
+		AUTH: "Email or Password is incorrect",
+		DNE: "User does not exist",
+		DEACTIVATED:
+			"Account has been deactivated. Please contact [number here] or [number here] for info or reactivation",
+		INVALID_REFRESH_TOKEN: "Session expired. Create a new one by logging in.",
 	},
 };
 
-export const toRegex = (search) => {
+export const TOKEN_AGE = {
+	// ACCESS: 60000 * 60,
+	ACCESS: 10000,
+	REFRESH: 60000 * 60 * 6,
+	VERIFY_EMAIL: 60000 * 60,
+	PASSWORD_RESET: 60000 * 10,
+};
+
+export const toMongoRegex = (search) => {
 	return { $regex: search, $options: "i" };
 };
+
+export const getFullUrl = (req) => req.protocol + "://" + req.get("host");
 
 export const RESPONSE = {
 	success: (code, data) => {
@@ -86,57 +97,53 @@ const tokenOptions = (maxAge) => {
 	};
 };
 
-const tokenRemove = async (accountNumber, Token) => {
-	return Token.deleteMany({ accountNumber: accountNumber });
-};
-
-export const getFullUrl = (req) => req.protocol + "://" + req.get("host");
-
+// TODO: think of a way to verify refresh token's user
+// TODO: multiple refresh token requests. fix
 export const TOKEN = {
 	refresh: async (req, res, Token) => {
 		try {
 			const refreshToken = req.body.token;
-			const { accountNumber } = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-			if (!refreshToken) {
-				tokenRemove(accountNumber, Token);
-				return res
-					.status(401)
-					.json(RESPONSE.fail(401, { error: "No refresh token found. Redirect to logout" }));
-			}
-
-			// const existingToken = await Token.findOne({ accountNumber: accountNumber });
-			// if (!existingToken) {
-			// 	tokenRemove(accountNumber, Token);
-			// 	return res
-			// 		.status(403)
-			// 		.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
-			// }
 
 			jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, async (err, user) => {
+				const { accountNumber, admin } = user;
+
+				// refresh token is invalid.
 				if (err) res.status(403).json(RESPONSE.fail(403, { error: "refresh token did not match" }));
 
+				// user does not match
+				// const userMatches = await Token.findOne({ accountNumber: accountNumber });
+				// if (!userMatches) {
+				// 	await Token.deleteMany({ accountNumber: accountNumber });
+
+				// 	return res
+				// 		.status(403)
+				// 		.json(RESPONSE.fail(403, { error: "No refresh token found. Redirect to logout" }));
+				// }
+
 				const userObj = {
-					accountNumber: user.accountNumber,
-					admin: user.admin,
+					admin: admin,
+					accountNumber: accountNumber,
 					generatedVia: "TOKEN_REFRESH",
 				};
-				const accessToken = TOKEN.create(userObj);
+				const accessToken = TOKEN.sign(userObj);
 				const refreshToken = jwt.sign(userObj, REFRESH_TOKEN_SECRET);
 
 				// delete token existing tokens
-				const tokenRemoveResponse = await tokenRemove(accountNumber, Token);
+				// await Token.deleteMany({ accountNumber: accountNumber });
 
 				// save new token to db
-				const tokenCreateResponse = Token.create({
-					...{ _id: new mongoose.Types.ObjectId() },
-					...{
-						accountNumber: user.accountNumber,
-						token: refreshToken,
-					},
-				});
+				// await Token.create({
+				// 	...{ _id: new mongoose.Types.ObjectId() },
+				// 	...{
+				// 		accountNumber: accountNumber,
+				// 		token: refreshToken,
+				// 	},
+				// });
 
-				res.cookie("accessToken", accessToken, tokenOptions(CONSTANTS.accessTokenAge));
-				res.cookie("refreshToken", refreshToken, tokenOptions(CONSTANTS.refreshTokenAge));
+				console.log("TOKEN REFRESH");
+
+				res.cookie("accessToken", accessToken, tokenOptions(TOKEN_AGE.ACCESS));
+				res.cookie("refreshToken", refreshToken, tokenOptions(TOKEN_AGE.REFRESH));
 				return res.status(200).json(RESPONSE.success(200, { message: "token refresh successful" }));
 			});
 		} catch (e) {
@@ -145,9 +152,9 @@ export const TOKEN = {
 				.json(RESPONSE.fail(400, { message: "No refresh token found. Redirect to logout" }));
 		}
 	},
-	create: (tokenObj) => {
+	sign: (tokenObj) => {
 		return jwt.sign(tokenObj, ACCESS_TOKEN_SECRET, {
-			expiresIn: CONSTANTS.accessTokenAge,
+			expiresIn: TOKEN_AGE.ACCESS,
 		});
 	},
 	remove: (accountNumber, Token) => tokenRemove(accountNumber, Token),

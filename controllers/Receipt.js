@@ -9,7 +9,7 @@ import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
 import Plan from "../models/Plan.js";
 import ReceiptReason from "../models/ReceiptReason.js";
-import { CONSTANTS, LOG, RESPONSE, SEARCH_TYPE, toRegex } from "../utility.js";
+import { CONSTANTS, LOG, RESPONSE, toMongoRegex } from "../utility.js";
 
 // import { GoogleDriveService } from "../googleDriveService.js";
 import { CloudinaryService } from "../cloudinary.js";
@@ -64,30 +64,30 @@ router.get("/", isLoggedIn, async (req, res) => {
 			// if has search
 			if (parsedFilter.searchType) {
 				switch (parsedFilter.searchType.value) {
-					case SEARCH_TYPE.RECEIPT.REFNO:
+					case CONSTANTS.SEARCH_TYPE.RECEIPT.REFNO:
 						// search in receipts
 						filter = {
 							...filter,
 							...{
 								$or: [
 									{
-										referenceNumber: toRegex(s),
+										referenceNumber: toMongoRegex(s),
 									},
-									{ "referenceType.name": toRegex(s) },
+									{ "referenceType.name": toMongoRegex(s) },
 								],
 							},
 						};
 						break;
-					case SEARCH_TYPE.RECEIPT.USER:
+					case CONSTANTS.SEARCH_TYPE.RECEIPT.USER:
 						const usersRes = await User.find({
 							$or: [
-								{ accountNumber: toRegex(s) },
-								{ firstName: toRegex(s) },
-								{ middleName: toRegex(s) },
-								{ lastName: toRegex(s) },
-								{ address: toRegex(s) },
-								{ contactNo: toRegex(s) },
-								{ email: toRegex(s) },
+								{ accountNumber: toMongoRegex(s) },
+								{ firstName: toMongoRegex(s) },
+								{ middleName: toMongoRegex(s) },
+								{ lastName: toMongoRegex(s) },
+								{ address: toMongoRegex(s) },
+								{ contactNo: toMongoRegex(s) },
+								{ email: toMongoRegex(s) },
 							],
 						}).select("_id");
 						filter = {
@@ -101,9 +101,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 							},
 						};
 						break;
-					case SEARCH_TYPE.RECEIPT.PLAN:
+					case CONSTANTS.SEARCH_TYPE.RECEIPT.PLAN:
 						const plansRes = await Plan.find({
-							$or: [{ name: toRegex(s) }, { description: toRegex(s) }],
+							$or: [{ name: toMongoRegex(s) }, { description: toMongoRegex(s) }],
 						}).select("_id");
 						filter = {
 							...filter,
@@ -183,9 +183,7 @@ router.get("/reason", isLoggedIn, async (req, res) => {
 
 		if (!filters) res.status(400).json(RESPONSE.fail(400, { message: "No receipt found" }));
 
-		const reasonRes = await ReceiptReason.findOne(filters);
-
-		console.log(reasonRes);
+		const reasonRes = await ReceiptReason.findOne(filters, null, { sort: { createdAt: -1 } });
 
 		res.status(200).json(RESPONSE.success(200, reasonRes));
 	} catch (e) {
