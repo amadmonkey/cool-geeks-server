@@ -8,9 +8,6 @@ import Receipt from "../models/Receipt.js";
 import { email, from } from "../mailing.js";
 import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
 
-import path from "path";
-import url from "url";
-
 const router = Router();
 
 const { ORIGIN } = process.env;
@@ -44,6 +41,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 router.get("/dashboard-info", isLoggedIn, async (req, res) => {
 	try {
+		console.log("dashboard-info", req.user);
 		if (req.user.admin) {
 			const pendingReceipts = await Receipt.countDocuments({
 				status: CONSTANTS.RECEIPT_STATUS.pending,
