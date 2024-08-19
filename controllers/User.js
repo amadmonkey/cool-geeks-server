@@ -51,6 +51,7 @@ router.get("/dashboard-info", isLoggedIn, async (req, res) => {
 			const pendingUsers = await User.countDocuments({ status: CONSTANTS.RECEIPT_STATUS.pending });
 			// check users that have no receipts in current cutoff
 			const overdueAccounts = 0;
+			console.log(pendingReceipts);
 
 			const data = {
 				pendingReceipts,
