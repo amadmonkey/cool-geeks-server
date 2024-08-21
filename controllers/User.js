@@ -3,10 +3,16 @@ import Router from "express";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import isLoggedIn from "./middleware.js";
+
+// models
 import User from "../models/User.js";
+import Subd from "../models/Subd.js";
+import Plan from "../models/Plan.js";
 import Receipt from "../models/Receipt.js";
+
+// helpers
 import { email, from } from "../mailing.js";
-import { CONSTANTS, getFullUrl, LOG, RESPONSE } from "../utility.js";
+import { CONSTANTS, getFullUrl, LOG, RESPONSE, toMongoRegex } from "../utility.js";
 
 const router = Router();
 
@@ -14,18 +20,97 @@ const { ORIGIN } = process.env;
 
 router.get("/", isLoggedIn, async (req, res) => {
 	try {
-		const { query } = req;
-		const isAdmin = req.user.admin;
-		if (isAdmin) {
-			const users = await User.find(
-				query.filter ? { ...JSON.parse(query.filter), ...{ admin: false } } : { admin: false },
-				null,
-				{
-					skip: (query.page - 1) * query.limit, // Starting Row
-					limit: query.limit || 0, // Ending Row
-					sort: JSON.parse(query.sort),
+		if (req.user.admin) {
+			const { query: filters } = req;
+			console.log("filters user", filters);
+			let filter = { ...(filters.filter ? JSON.parse(filters.filter) : {}), admin: false };
+
+			if (filters.query) {
+				const parsedFilter = JSON.parse(filters.query);
+				const s = parsedFilter.search;
+
+				// default filters. e.g: data, cutoff type, status
+				filter = {
+					...filter,
+					...(parsedFilter.cutOffType && parsedFilter.cutOffType !== "BOTH"
+						? { cutoff: parsedFilter.cutOffType }
+						: {}),
+					...(parsedFilter.status && parsedFilter.status !== "ALL"
+						? { status: parsedFilter.status }
+						: {}),
+				};
+
+				if (parsedFilter.searchType) {
+					switch (parsedFilter.searchType.value) {
+						case CONSTANTS.SEARCH_TYPE.ACCOUNT.USER:
+							filter = {
+								...filter,
+								...{
+									$or: [
+										{ accountNumber: toMongoRegex(s) },
+										{ firstName: toMongoRegex(s) },
+										{ middleName: toMongoRegex(s) },
+										{ lastName: toMongoRegex(s) },
+										{ address: toMongoRegex(s) },
+										{ contactNo: toMongoRegex(s) },
+										{ email: toMongoRegex(s) },
+									],
+								},
+							};
+							break;
+						case CONSTANTS.SEARCH_TYPE.ACCOUNT.SUBD:
+							const subdsRes = await Subd.find({
+								$or: [
+									{ name: toMongoRegex(s) },
+									{ code: toMongoRegex(s) },
+									{ number: toMongoRegex(s) },
+								],
+							}).select("_id");
+							filter = {
+								...filter,
+								...{
+									$or: subdsRes.length
+										? subdsRes.map((subd) => {
+												return { subdRef: subd._id };
+										  })
+										: [{ subdRef: null }],
+								},
+							};
+							break;
+						case CONSTANTS.SEARCH_TYPE.ACCOUNT.PLAN:
+							const plansRes = await Plan.find({
+								$or: [
+									{ name: toMongoRegex(s) },
+									{ description: toMongoRegex(s) },
+									s
+										? {
+												$where: `function() { return this.price.toString().match(/${s}/) != null; }`,
+										  }
+										: {},
+								],
+							}).select("_id");
+							filter = {
+								...filter,
+								...{
+									$or: plansRes.length
+										? plansRes.map((plan) => {
+												return { planRef: plan._id };
+										  })
+										: [{ planRef: null }],
+								},
+							};
+							break;
+						default:
+							break;
+					}
 				}
-			).populate("subdRef planRef");
+			}
+
+			const users = await User.find(filter, null, {
+				skip: (filters.page - 1) * filters.limit, // Starting Row
+				limit: filters.limit || 0, // Ending Row
+				sort: JSON.parse(filters.sort),
+			}).populate("subdRef planRef");
 			const data = {
 				list: users.length ? users : [],
 			};

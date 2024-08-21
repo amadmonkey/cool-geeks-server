@@ -35,6 +35,11 @@ export const CONSTANTS = {
 			USER: "USER",
 			PLAN: "PLAN",
 		},
+		ACCOUNT: {
+			USER: "USER",
+			SUBD: "SUBD",
+			PLAN: "PLAN",
+		},
 	},
 	MESSAGE: {
 		AUTH: "Email or Password is incorrect",
@@ -46,8 +51,7 @@ export const CONSTANTS = {
 };
 
 export const TOKEN_AGE = {
-	// ACCESS: 60000 * 60,
-	ACCESS: 10000,
+	ACCESS: 60000 * 60,
 	REFRESH: 60000 * 60 * 6,
 	VERIFY_EMAIL: 60000 * 60,
 	PASSWORD_RESET: 60000 * 10,

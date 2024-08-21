@@ -3,14 +3,16 @@ import multer from "multer";
 import Router from "express";
 import mongoose from "mongoose";
 import { DateTime } from "luxon";
-
 import isLoggedIn from "./middleware.js";
+
+// models
 import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
 import Plan from "../models/Plan.js";
 import ReceiptReason from "../models/ReceiptReason.js";
-import { CONSTANTS, LOG, RESPONSE, toMongoRegex } from "../utility.js";
 
+// helpers
+import { CONSTANTS, LOG, RESPONSE, toMongoRegex } from "../utility.js";
 // import { GoogleDriveService } from "../googleDriveService.js";
 import { CloudinaryService } from "../cloudinary.js";
 
@@ -45,7 +47,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 		if (filters.query) {
 			const parsedFilter = JSON.parse(filters.query);
 			const s = parsedFilter.search;
+			console.log(parsedFilter.status);
 
+			// default filters. e.g: data, cutoff type, status
 			filter = {
 				...filter,
 				...(parsedFilter.dateRange
@@ -58,7 +62,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 				...(parsedFilter.cutOffType && parsedFilter.cutOffType !== "BOTH"
 					? { cutoff: parsedFilter.cutOffType }
 					: {}),
-				...(parsedFilter.status !== "ALL" ? { status: parsedFilter.status } : {}),
+				...(parsedFilter.status && parsedFilter.status !== "ALL"
+					? { status: parsedFilter.status }
+					: {}),
 			};
 
 			// if has search
@@ -103,7 +109,15 @@ router.get("/", isLoggedIn, async (req, res) => {
 						break;
 					case CONSTANTS.SEARCH_TYPE.RECEIPT.PLAN:
 						const plansRes = await Plan.find({
-							$or: [{ name: toMongoRegex(s) }, { description: toMongoRegex(s) }],
+							$or: [
+								{ name: toMongoRegex(s) },
+								{ description: toMongoRegex(s) },
+								s
+									? {
+											$where: `function() { return this.price.toString().match(/${s}/) != null; }`,
+									  }
+									: {},
+							],
 						}).select("_id");
 						filter = {
 							...filter,
@@ -122,6 +136,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			}
 		}
 
+		console.log("filter", filter);
 		const receipts = await Receipt.find(filter)
 			.skip((filters.pagesCurrent - 1) * filters.limit)
 			.limit(filters.limit)
