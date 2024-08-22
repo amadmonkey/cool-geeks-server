@@ -84,7 +84,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 									{ description: toMongoRegex(s) },
 									s
 										? {
-												$where: `function() { return this.price.toString().match(/${s}/) != null; }`,
+												$expr: {
+													$regexMatch: {
+														input: { $toString: `$price` },
+														regex: s,
+													},
+												},
 										  }
 										: {},
 								],
