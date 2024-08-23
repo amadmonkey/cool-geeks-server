@@ -27,7 +27,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 			if (filters.query) {
 				const parsedFilter = JSON.parse(filters.query);
-				const s = parsedFilter.search;
+				const search = parsedFilter.search;
 
 				// default filters. e.g: data, cutoff type, status
 				filter = {
@@ -40,74 +40,67 @@ router.get("/", isLoggedIn, async (req, res) => {
 						: {}),
 				};
 
-				if (parsedFilter.searchType) {
-					switch (parsedFilter.searchType.value) {
-						case CONSTANTS.SEARCH_TYPE.ACCOUNT.USER:
-							filter = {
-								...filter,
-								...{
-									$or: [
-										{ accountNumber: toMongoRegex(s) },
-										{ firstName: toMongoRegex(s) },
-										{ middleName: toMongoRegex(s) },
-										{ lastName: toMongoRegex(s) },
-										{ address: toMongoRegex(s) },
-										{ contactNo: toMongoRegex(s) },
-										{ email: toMongoRegex(s) },
-									],
-								},
-							};
-							break;
-						case CONSTANTS.SEARCH_TYPE.ACCOUNT.SUBD:
-							const subdsRes = await Subd.find({
-								$or: [
-									{ name: toMongoRegex(s) },
-									{ code: toMongoRegex(s) },
-									{ number: toMongoRegex(s) },
+				// if has search
+				if (search) {
+					// get matched from subds
+					const subdsRes = await Subd.find({
+						$or: [
+							{ name: toMongoRegex(search) },
+							{ code: toMongoRegex(search) },
+							{ number: toMongoRegex(search) },
+						],
+					}).select("_id");
+
+					// get matched from plans
+					const plansRes = await Plan.find({
+						$or: [
+							{ name: toMongoRegex(search) },
+							{ description: toMongoRegex(search) },
+							search
+								? {
+										$expr: {
+											$regexMatch: {
+												input: { $toString: `$price` },
+												regex: search,
+											},
+										},
+								  }
+								: {},
+						],
+					}).select("_id");
+
+					// concat matched subds and plans
+					const or = [
+						...(plansRes.length
+							? plansRes.map((plan) => {
+									return { planRef: plan._id };
+							  })
+							: []),
+						...(subdsRes.length
+							? subdsRes.map((subd) => {
+									return { subdRef: subd._id };
+							  })
+							: []),
+					];
+
+					// concat to final filter
+					filter = {
+						...filter,
+						...{
+							$or: [
+								...[
+									{ accountNumber: toMongoRegex(search) },
+									{ firstName: toMongoRegex(search) },
+									{ middleName: toMongoRegex(search) },
+									{ lastName: toMongoRegex(search) },
+									{ address: toMongoRegex(search) },
+									{ contactNo: toMongoRegex(search) },
+									{ email: toMongoRegex(search) },
 								],
-							}).select("_id");
-							filter = {
-								...filter,
-								...{
-									$or: subdsRes.length
-										? subdsRes.map((subd) => {
-												return { subdRef: subd._id };
-										  })
-										: [{ subdRef: null }],
-								},
-							};
-							break;
-						case CONSTANTS.SEARCH_TYPE.ACCOUNT.PLAN:
-							const plansRes = await Plan.find({
-								$or: [
-									{ name: toMongoRegex(s) },
-									{ description: toMongoRegex(s) },
-									s
-										? {
-												$expr: {
-													$regexMatch: {
-														input: { $toString: `$price` },
-														regex: s,
-													},
-												},
-										  }
-										: {},
-								],
-							}).select("_id");
-							filter = {
-								...filter,
-								...{
-									$or: plansRes.length
-										? plansRes.map((plan) => {
-												return { planRef: plan._id };
-										  })
-										: [{ planRef: null }],
-								},
-							};
-							break;
-						default:
-							break;
-					}
+								...or,
+							],
+						},
+					};
 				}
 			}
 
@@ -116,8 +109,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 				limit: filters.limit || 0, // Ending Row
 				sort: JSON.parse(filters.sort),
 			}).populate("subdRef planRef");
+
+			const count = await User.countDocuments(filter);
+
 			const data = {
 				list: users.length ? users : [],
+				totalCount: count,
 			};
 			return res.status(200).json(RESPONSE.success(200, data));
 		} else {

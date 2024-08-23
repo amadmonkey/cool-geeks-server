@@ -46,7 +46,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 		if (filters.query) {
 			const parsedFilter = JSON.parse(filters.query);
-			const s = parsedFilter.search;
+			const search = parsedFilter.search;
 			console.log(parsedFilter.status);
 
 			// default filters. e.g: data, cutoff type, status
@@ -68,80 +68,70 @@ router.get("/", isLoggedIn, async (req, res) => {
 			};
 
 			// if has search
-			if (parsedFilter.searchType) {
-				switch (parsedFilter.searchType.value) {
-					case CONSTANTS.SEARCH_TYPE.RECEIPT.REFNO:
-						// search in receipts
-						filter = {
-							...filter,
-							...{
-								$or: [
-									{
-										referenceNumber: toMongoRegex(s),
+			if (search) {
+				// get matched from users
+				const usersRes = await User.find({
+					$or: [
+						{ accountNumber: toMongoRegex(search) },
+						{ firstName: toMongoRegex(search) },
+						{ middleName: toMongoRegex(search) },
+						{ lastName: toMongoRegex(search) },
+						{ address: toMongoRegex(search) },
+						{ contactNo: toMongoRegex(search) },
+						{ email: toMongoRegex(search) },
+					],
+				}).select("_id");
+
+				// get matched from plans
+				const plansRes = await Plan.find({
+					$or: [
+						{ name: toMongoRegex(search) },
+						{ description: toMongoRegex(search) },
+						search
+							? {
+									$expr: {
+										$regexMatch: {
+											input: { $toString: `$price` },
+											regex: search,
+										},
 									},
-									{ "referenceType.name": toMongoRegex(s) },
-								],
-							},
-						};
-						break;
-					case CONSTANTS.SEARCH_TYPE.RECEIPT.USER:
-						const usersRes = await User.find({
-							$or: [
-								{ accountNumber: toMongoRegex(s) },
-								{ firstName: toMongoRegex(s) },
-								{ middleName: toMongoRegex(s) },
-								{ lastName: toMongoRegex(s) },
-								{ address: toMongoRegex(s) },
-								{ contactNo: toMongoRegex(s) },
-								{ email: toMongoRegex(s) },
+							  }
+							: {},
+					],
+				}).select("_id");
+
+				// concat matched users and plans
+				const or = [
+					...(plansRes.length
+						? plansRes.map((plan) => {
+								return { planRef: plan._id };
+						  })
+						: []),
+					...(usersRes.length
+						? usersRes.map((user) => {
+								return { userRef: user._id };
+						  })
+						: []),
+				];
+
+				// concat to final filter
+				filter = {
+					...filter,
+					...{
+						$or: [
+							...[
+								{
+									referenceNumber: toMongoRegex(search),
+								},
+								{ "referenceType.name": toMongoRegex(search) },
 							],
-						}).select("_id");
-						filter = {
-							...filter,
-							...{
-								$or: usersRes.length
-									? usersRes.map((user) => {
-											return { userRef: user._id };
-									  })
-									: [{ userRef: null }],
-							},
-						};
-						break;
-					case CONSTANTS.SEARCH_TYPE.RECEIPT.PLAN:
-						const plansRes = await Plan.find({
-							$or: [
-								{ name: toMongoRegex(s) },
-								{ description: toMongoRegex(s) },
-								s
-									? {
-											$expr: {
-												$regexMatch: {
-													input: { $toString: `$price` },
-													regex: s,
-												},
-											},
-									  }
-									: {},
-							],
-						}).select("_id");
-						filter = {
-							...filter,
-							...{
-								$or: plansRes.length
-									? plansRes.map((plan) => {
-											return { planRef: plan._id };
-									  })
-									: [{ planRef: null }],
-							},
-						};
-						break;
-					default:
-						break;
-				}
+							...or,
+						],
+					},
+				};
 			}
 		}
 
-		console.log("filter", filter);
 		const receipts = await Receipt.find(filter)
 			.skip((filters.pagesCurrent - 1) * filters.limit)
 			.limit(filters.limit)
