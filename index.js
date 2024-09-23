@@ -10,6 +10,7 @@ import SubdRouter from "./controllers/Subd.js";
 import PlanRouter from "./controllers/Plan.js";
 import TokenRouter from "./controllers/Token.js";
 import ReceiptRouter from "./controllers/Receipt.js";
+import SettingsRouter from "./controllers/Settings.js";
 
 import { LOG, RESPONSE } from "./utility.js";
 
@@ -45,6 +46,7 @@ app.use("/subd", SubdRouter);
 app.use("/plan", PlanRouter);
 app.use("/token", TokenRouter);
 app.use("/receipt", ReceiptRouter);
+app.use("/settings", SettingsRouter);
 
 export default app;
 app.listen(PORT, "0.0.0.0", (err) => {

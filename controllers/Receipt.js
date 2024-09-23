@@ -47,7 +47,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 		if (filters.query) {
 			const parsedFilter = JSON.parse(filters.query);
 			const search = parsedFilter.search;
-			console.log(parsedFilter.status);
 
 			// default filters. e.g: data, cutoff type, status
 			filter = {
@@ -55,7 +54,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 				...(parsedFilter.dateRange
 					? Object.keys(parsedFilter.dateRange).length
 						? {
-								createdAt: { $gte: parsedFilter.dateRange.start, $lte: parsedFilter.dateRange.end },
+								updatedAt: { $gte: parsedFilter.dateRange.start, $lte: parsedFilter.dateRange.end },
 						  }
 						: {}
 					: {}),
