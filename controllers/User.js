@@ -111,6 +111,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			}).populate("subdRef planRef");
 
 			const count = await User.countDocuments(filter);
+			console.log("count", count);
 
 			const data = {
 				list: users.length ? users : [],
