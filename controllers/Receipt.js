@@ -6,9 +6,10 @@ import { DateTime } from "luxon";
 import isLoggedIn from "./middleware.js";
 
 // models
-import Receipt from "../models/Receipt.js";
 import User from "../models/User.js";
 import Plan from "../models/Plan.js";
+import Receipt from "../models/Receipt.js";
+import Settings from "../models/Settings.js";
 import ReceiptReason from "../models/ReceiptReason.js";
 
 // helpers
@@ -339,9 +340,10 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 });
 
 // TODO: convert to luxon
-const dateToCutOff = (date, cutOffType) => {
+const dateToCutOff = async (date, cutOffType) => {
+	const gracePeriod = await Settings.find({ _id: "66f05edc10a64439d3807f83" });
 	return date.set({
-		day: cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day,
+		day: (cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day) + gracePeriod,
 		hour: 23,
 		minute: 59,
 		second: 59,
@@ -357,7 +359,7 @@ const createFailed = async (accountNumber) => {
 		const d = DateTime.now();
 
 		// set last cutoff depending on type (e.g: mid, end)
-		const lastCutoffEndDate = dateToCutOff(
+		const lastCutoffEndDate = await dateToCutOff(
 			d.minus({
 				month: cutOffType === CONSTANTS.CUTOFF.mid ? (d.day > 15 ? 0 : 1) : 1,
 			}),

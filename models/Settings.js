@@ -4,6 +4,7 @@ import { SchemaTypes } from "mongoose";
 const SettingsSchema = new mongoose.Schema(
 	{
 		_id: { type: SchemaTypes.ObjectId, required: true },
+		userRef: { type: SchemaTypes.ObjectId, ref: "User", required: true },
 		name: { type: String },
 		value: { type: String },
 	},

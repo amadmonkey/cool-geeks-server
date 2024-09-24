@@ -108,6 +108,11 @@ export const TOKEN = {
 		try {
 			const refreshToken = req.body.token;
 
+			if (!refreshToken)
+				return res
+					.status(400)
+					.json(RESPONSE.fail(400, { message: "No refresh token found. Redirect to logout" }));
+
 			jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, async (err, user) => {
 				const { accountNumber, admin } = user;
 

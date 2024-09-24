@@ -3,8 +3,11 @@ import Router from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// models
 import User from "../models/User.js";
+import Settings from "../models/Settings.js";
 
+// helpers
 import { email, from } from "../mailing.js";
 import { CONSTANTS, getFullUrl, LOG, RESPONSE, TOKEN, TOKEN_AGE } from "../utility.js";
 
@@ -32,22 +35,23 @@ router.get("/", async (req, res) => {
 
 const login = async (req, res, activation) => {
 	try {
-		const user = await User.findOne(
-			{
-				$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
-				status: CONSTANTS.ACCOUNT_STATUS.STANDARD,
-			},
-			"-_id"
-		).populate("planRef subdRef");
+		const user = await User.findOne({
+			$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
+			status: CONSTANTS.ACCOUNT_STATUS.STANDARD,
+		}).populate("planRef subdRef");
 
 		if (user) {
 			if (user.status === CONSTANTS.ACCOUNT_STATUS.DEACTIVATED) {
 				return res.status(403).json(RESPONSE.fail(403, { general: CONSTANTS.MESSAGE.DEACTIVATED }));
 			}
 
+			// get settings. TODO: add linking to accounts for user settings
+			const settings = await Settings.find();
+
 			const passwordValid = req.body.password
 				? await bcrypt.compare(req.body.password, user.password)
 				: null;
+
 			if (passwordValid || activation) {
 				const userObj = {
 					accountNumber: user.accountNumber,
@@ -65,10 +69,11 @@ const login = async (req, res, activation) => {
 				// 	},
 				// });
 
+				user._id = undefined;
 				user.password = undefined;
 				res.cookie("accessToken", accessToken, TOKEN.options(TOKEN_AGE.ACCESS));
 				res.cookie("refreshToken", refreshToken, TOKEN.options(TOKEN_AGE.REFRESH));
-				res.status(200).json(RESPONSE.success(200, { user }));
+				res.status(200).json(RESPONSE.success(200, { user, settings }));
 			} else {
 				return res.status(400).json(RESPONSE.fail(400, { general: CONSTANTS.MESSAGE.AUTH }));
 			}
