@@ -407,7 +407,6 @@ const createFailed = async (accountNumber) => {
 		}
 	} catch (e) {
 		LOG.error(e);
-		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 };
 
