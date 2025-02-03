@@ -111,7 +111,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 			}).populate("subdRef planRef");
 
 			const count = await User.countDocuments(filter);
-			console.log("count", count);
 
 			const data = {
 				list: users.length ? users : [],
@@ -215,6 +214,17 @@ router.put("/update", isLoggedIn, async (req, res) => {
 		}).populate("subdRef planRef");
 		res.status(200).json(RESPONSE.success(200, updateRes));
 	} catch (e) {
+		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
+	}
+});
+
+router.delete("/", isLoggedIn, async (req, res) => {
+	try {
+		const deleteRes = await User.findOneAndDelete({ accountNumber: req.body.accountNumber });
+		LOG.info(deleteRes);
+		res.status(200).json(RESPONSE.success(200, deleteRes));
+	} catch (e) {
+		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
 	}
 });
