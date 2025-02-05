@@ -220,9 +220,20 @@ router.put("/update", isLoggedIn, async (req, res) => {
 
 router.delete("/", isLoggedIn, async (req, res) => {
 	try {
-		const deleteRes = await User.findOneAndDelete({ accountNumber: req.body.accountNumber });
-		LOG.info(deleteRes);
-		res.status(200).json(RESPONSE.success(200, deleteRes));
+		// get id
+		const user = await User.findOne({ accountNumber: req.body.accountNumber });
+
+		// delete email
+		const userDeleteRes = await User.findOneAndDelete({ _id: user._id });
+		LOG.info(userDeleteRes);
+
+		// delete receipts related to user
+		// if (user) {
+		// 	const receiptDeleteRes = await Receipt.deleteMany({ userRef: user._id });
+		// 	LOG.info(receiptDeleteRes);
+		// }
+
+		res.status(200).json(RESPONSE.success(200, userDeleteRes));
 	} catch (e) {
 		LOG.error(e);
 		res.status(400).json(RESPONSE.fail(400, { message: e.message }));
