@@ -105,7 +105,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			}
 
 			const users = await User.find(filter, null, {
-				skip: (filters.page - 1) * filters.limit, // Starting Row
+				skip: (filters.pagesCurrent - 1) * filters.limit, // Starting Row
 				limit: filters.limit || 0, // Ending Row
 				sort: JSON.parse(filters.sort),
 			}).populate("subdRef planRef");
@@ -169,6 +169,11 @@ router.post("/signup", async (req, res) => {
 
 router.post("/create", async (req, res) => {
 	try {
+		if (req.body.password) {
+			req.body.status = CONSTANTS.ACCOUNT_STATUS.STANDARD;
+			req.body.password = await bcrypt.hash(req.body.password, 10);
+		}
+
 		const createRes = await User.create({
 			...{ _id: new mongoose.Types.ObjectId() },
 			...{ ...req.body, ...{ subdRef: req.body.subd._id, planRef: req.body.plan._id } },
