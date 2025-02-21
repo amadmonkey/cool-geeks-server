@@ -191,6 +191,7 @@ router.post("/create", async (req, res) => {
 					name: `${createRes.firstName} ${createRes.lastName}`,
 					dirname: getFullUrl(req),
 					accountNumber: createRes.accountNumber,
+					action: req.body.password ? "login" : "finalize your account",
 					link: `${ORIGIN}/login?u=${createRes.accountNumber}`,
 				},
 			})

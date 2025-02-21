@@ -293,6 +293,7 @@ router.get("/email-test", async (req, res) => {
 					name: `Steve from Minecraft`,
 					dirname: getFullUrl(req),
 					accountNumber: accountNumber,
+					action: "asdasd",
 					link: `${ORIGIN}/verify?a=reset&u=${accountNumber}&t=${"token_here"}`,
 				},
 			})
