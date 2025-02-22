@@ -133,7 +133,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 		}
 
 		const receipts = await Receipt.find(filter)
-			.skip((filters.pagesCurrent - 1) * filters.limit)
+			.skip((filters.page - 1) * filters.limit)
 			.limit(filters.limit)
 			.sort(JSON.parse(filters.sort))
 			.collation({ locale: "en", strength: 2 })

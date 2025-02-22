@@ -32,6 +32,16 @@ router.get("/", isLoggedIn, async (req, res) => {
 				// default filters. e.g: data, cutoff type, status
 				filter = {
 					...filter,
+					...(parsedFilter.dateRange
+						? Object.keys(parsedFilter.dateRange).length
+							? {
+									updatedAt: {
+										$gte: parsedFilter.dateRange.start,
+										$lte: parsedFilter.dateRange.end,
+									},
+							  }
+							: {}
+						: {}),
 					...(parsedFilter.cutOffType && parsedFilter.cutOffType !== "BOTH"
 						? { cutoff: parsedFilter.cutOffType }
 						: {}),
@@ -105,7 +115,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 			}
 
 			const users = await User.find(filter, null, {
-				skip: (filters.pagesCurrent - 1) * filters.limit, // Starting Row
+				skip: (filters.page - 1) * filters.limit, // Starting Row
 				limit: filters.limit || 0, // Ending Row
 				sort: JSON.parse(filters.sort),
 			}).populate("subdRef planRef");
