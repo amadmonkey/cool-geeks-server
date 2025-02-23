@@ -37,7 +37,7 @@ const login = async (req, res, activation) => {
 	try {
 		const user = await User.findOne({
 			$or: [{ accountNumber: req.body.emailAccountNo }, { email: req.body.emailAccountNo }],
-			status: CONSTANTS.ACCOUNT_STATUS.STANDARD,
+			status: CONSTANTS.ACCOUNT_STATUS.ACTIVE,
 		}).populate("planRef subdRef");
 
 		if (user) {
@@ -180,7 +180,7 @@ router.put("/activate", async (req, res) => {
 					status: CONSTANTS.ACCOUNT_STATUS.VERIFY,
 					activated: false,
 				},
-				{ status: CONSTANTS.ACCOUNT_STATUS.STANDARD, activated: true },
+				{ status: CONSTANTS.ACCOUNT_STATUS.ACTIVE, activated: true },
 				{
 					new: true,
 				}

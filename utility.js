@@ -20,7 +20,7 @@ export const CONSTANTS = {
 		failed: "FAILED",
 	},
 	ACCOUNT_STATUS: {
-		STANDARD: "STANDARD", // can login
+		ACTIVE: "ACTIVE", // can login
 		PENDING: "PENDING", // cannot login, ask for password
 		VERIFY: "VERIFY", // update password. waiting for verificaton from user.
 		DEACTIVATED: "DEACTIVATED", // cannot login

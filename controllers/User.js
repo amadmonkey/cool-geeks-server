@@ -180,7 +180,7 @@ router.post("/signup", async (req, res) => {
 router.post("/create", async (req, res) => {
 	try {
 		if (req.body.password) {
-			req.body.status = CONSTANTS.ACCOUNT_STATUS.STANDARD;
+			req.body.status = CONSTANTS.ACCOUNT_STATUS.ACTIVE;
 			req.body.password = await bcrypt.hash(req.body.password, 10);
 		}
 
