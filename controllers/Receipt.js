@@ -343,7 +343,9 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 const dateToCutOff = async (date, cutOffType) => {
 	const gracePeriod = await Settings.find({ _id: "66f05edc10a64439d3807f83" });
 	return date.set({
-		day: (cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day) + gracePeriod,
+		day:
+			(cutOffType === CONSTANTS.CUTOFF.mid ? 15 : date.endOf("month").day) +
+			Number(gracePeriod[0].value),
 		hour: 23,
 		minute: 59,
 		second: 59,
