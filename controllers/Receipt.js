@@ -39,7 +39,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 
 		const isAdmin = req.user.admin;
 		const user = await User.findOne({ accountNumber: req.user.accountNumber });
-		if (!user.admin) await createFailed(req.user.accountNumber);
+		const fails = !user.admin ? await createFailed(user) : [];
 
 		let filter = isAdmin
 			? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } }
@@ -55,7 +55,10 @@ router.get("/", isLoggedIn, async (req, res) => {
 				...(parsedFilter.dateRange
 					? Object.keys(parsedFilter.dateRange).length
 						? {
-								updatedAt: { $gte: parsedFilter.dateRange.start, $lte: parsedFilter.dateRange.end },
+								updatedAt: {
+									$gte: parsedFilter.dateRange.start,
+									$lte: parsedFilter.dateRange.end,
+								},
 						  }
 						: {}
 					: {}),
@@ -147,12 +150,12 @@ router.get("/", isLoggedIn, async (req, res) => {
 				"userRef",
 			]);
 
-		const count = await Receipt.countDocuments(filter);
+		console.log("receipts", receipts.length);
 
 		// check if already paid current cutoff
 		const data = {
-			list: receipts.length ? receipts : [],
-			totalCount: count,
+			list: [...fails, ...(receipts.length ? receipts : [])],
+			totalCount: receipts.length,
 			latestReceipt: isAdmin ? null : await getLatestReceipt(user),
 		};
 		res.status(200).json(RESPONSE.success(200, data));
@@ -166,13 +169,6 @@ router.get("/", isLoggedIn, async (req, res) => {
 router.get("/image", async (req, res) => {
 	try {
 		const { query } = req;
-		// GDRIVE GET
-		// const googleDriveService = new GoogleDriveService();
-		// const gdriveRes = await googleDriveService.downloadFile(query.id);
-		// console.log(gdriveRes.data);
-		// res.header("Content-Type", "image/jpeg");
-		// res.header("Content-Length", gdriveRes.data.size);
-		// gdriveRes.data.stream().pipe(res);
 
 		// CLOUDINARY GET
 		const cloudinaryService = new CloudinaryService();
@@ -214,14 +210,6 @@ router.post("/create", isLoggedIn, upload.single("receipt"), async (req, res) =>
 			const receiptDate = latestReceipt
 				? DateTime.fromJSDate(latestReceipt.receiptDate).plus({ month: 1 })
 				: DateTime.now().toJSDate(); //"2024-04-11"
-
-			// GDRIVE UPLOAD
-			// const googleDriveService = new GoogleDriveService();
-			// const imageId = await googleDriveService
-			// .saveFile(req.file.filename, req.file.path, req.file.mimetype, CONSTANTS.GDRIVE_ID.RECEIPT)
-			// 	.catch((error) => {
-			// 		throw error;
-			// 	});
 
 			// CLOUDINARY UPLOAD
 			const cloudinaryService = new CloudinaryService();
@@ -303,21 +291,10 @@ router.post("/update", isLoggedIn, upload.single("receipt"), async (req, res) =>
 
 		// delete old file
 		if (form.imageId) {
-			// GDRIVE DELETE
-			// const gdriveDeleteRes = await googleDriveService.deleteFile(form.imageId);
-			// console.log("gdriveDeleteRes", gdriveDeleteRes);
-
 			// CLOUDINARY DELETE
 			const deleteRes = await cloudinaryService.destroy(form.imageId);
 			LOG.info("deleteRes", deleteRes);
 		}
-
-		// GDRIVE UPLOAD
-		// const imageId = await googleDriveService
-		// 	.saveFile(req.file.filename, req.file.path, req.file.mimetype, folderId)
-		// 	.catch((error) => {
-		// 		throw error;
-		// 	});
 
 		// CLOUDINARY UPLOAD
 		const cloudinaryRes = await cloudinaryService.upload(
@@ -353,9 +330,9 @@ const dateToCutOff = async (date, cutOffType) => {
 	});
 };
 
-const createFailed = async (accountNumber) => {
+const createFailed = async (user) => {
 	try {
-		const user = await User.findOne({ accountNumber: accountNumber });
+		console.log("process createFailed");
 		const { _id, cutoff: cutOffType, createdAt } = user;
 
 		const d = DateTime.now();
@@ -371,15 +348,16 @@ const createFailed = async (accountNumber) => {
 		// get latest receipt. if none, use createdAt to set how many missed months
 		const c = DateTime.fromJSDate(createdAt).plus({ month: 1 }).toJSDate();
 		let latestReceiptDate = DateTime.fromJSDate((await getLatestReceipt(user))?.receiptDate || c);
-		latestReceiptDate = dateToCutOff(latestReceiptDate, cutOffType);
+		latestReceiptDate = await dateToCutOff(latestReceiptDate, cutOffType);
 
 		const { months } = lastCutoffEndDate.diff(latestReceiptDate, ["months"]);
 
 		if (months) {
+			let failArray = [];
 			for (let monthToAdd = 0; monthToAdd < months; monthToAdd++) {
 				const range = {
-					$gte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd }), cutOffType),
-					$lte: dateToCutOff(latestReceiptDate.plus({ month: monthToAdd + 1 }), cutOffType),
+					$gte: await dateToCutOff(latestReceiptDate.plus({ month: monthToAdd }), cutOffType),
+					$lte: await dateToCutOff(latestReceiptDate.plus({ month: monthToAdd + 1 }), cutOffType),
 				};
 
 				// // if already has failed for current range don't do shit
@@ -389,7 +367,6 @@ const createFailed = async (accountNumber) => {
 						receiptDate: range,
 						status: CONSTANTS.RECEIPT_STATUS.failed,
 					})) || null;
-				LOG.info("hasFailed", hasFailed ? true : false);
 
 				if (!hasFailed) {
 					const formData = {
@@ -403,9 +380,22 @@ const createFailed = async (accountNumber) => {
 						cutoff: user.cutoff,
 						status: "FAILED",
 					};
-					await Receipt.create(formData);
+					failArray.unshift(
+						await Receipt.create(formData).then((t) =>
+							t.populate([
+								{
+									path: "planRef",
+									populate: {
+										path: "subdRef",
+									},
+								},
+								"userRef",
+							])
+						)
+					);
 				}
 			}
+			return failArray;
 		}
 	} catch (e) {
 		LOG.error(e);
