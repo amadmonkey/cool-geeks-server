@@ -22,9 +22,9 @@ router.get("/", isLoggedIn, async (req, res) => {
 	try {
 		if (req.user.admin) {
 			const { query: filters } = req;
-			console.log("filters user", filters);
 			let filter = { ...(filters.filter ? JSON.parse(filters.filter) : {}), admin: false };
 
+			console.log("filters user", filters);
 			if (filters.query) {
 				const parsedFilter = JSON.parse(filters.query);
 				const search = parsedFilter.search;
@@ -32,6 +32,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 				// default filters. e.g: data, cutoff type, status
 				filter = {
 					...filter,
+					...(parsedFilter.accountNumber ? { accountNumber: parsedFilter.accountNumber } : {}),
 					...(parsedFilter.dateRange
 						? Object.keys(parsedFilter.dateRange).length
 							? {
@@ -114,6 +115,7 @@ router.get("/", isLoggedIn, async (req, res) => {
 				}
 			}
 
+			console.log("filter", filter);
 			const users = await User.find(filter, null, {
 				skip: (filters.page - 1) * filters.limit, // Starting Row
 				limit: filters.limit || 0, // Ending Row

@@ -40,13 +40,33 @@ router.get("/", isLoggedIn, async (req, res) => {
 		const isAdmin = req.user.admin;
 		const user = await User.findOne({ accountNumber: req.user.accountNumber });
 		const fails = !user.admin ? await createFailed(user) : [];
+		const parsedFilter = JSON.parse(filters.query);
 
-		let filter = isAdmin
-			? { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } }
-			: { userRef: user._id };
+		let filter = {};
+		if (isAdmin) {
+			// is admin
+			if (parsedFilter.accountNumber) {
+				// is viewing user
+				const client = await User.findOne({ accountNumber: parsedFilter.accountNumber });
+				filter.userRef = client._id;
+			} else {
+				// is viewing receipts page
+				console.log("is viewing receipts page");
+				filter = { status: { $ne: CONSTANTS.RECEIPT_STATUS.failed } };
+			}
+		} else {
+			// is user
+			filter.userRef = user._id;
+		}
 
+		// 1. is not admin = user history.
+		// 2. is admin
+		// 		a. has accountNumber
+		//		b. no accountNumber
+
+		console.log("filter", filter);
 		if (filters.query) {
-			const parsedFilter = JSON.parse(filters.query);
+			// const parsedFilter = JSON.parse(filters.query);
 			const search = parsedFilter.search;
 
 			// default filters. e.g: data, cutoff type, status
